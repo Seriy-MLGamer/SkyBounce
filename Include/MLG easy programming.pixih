@@ -1,0 +1,108 @@
+MOBILE=1
+THREADS=1
+CURVE_LINEAR=0
+CURVE_SMOOTH=1
+CURVE_HARD=2
+CURVE_FAST=3
+CURVE_SLOW=4
+fn crossfade($value, $start, $end, $start_value, $duration, $curve)
+{
+	$delta=$end-$start
+	/*if $value<=$start_value
+	{
+		ret($start)
+	}
+	else{if $value>=$start_value+$duration
+	{
+		ret($end)
+	}
+	else
+	{*/
+		if $curve==CURVE_LINEAR
+		{
+			ret($start+$delta*($value-$start_value)/$duration)
+		}
+		else{if $curve==CURVE_SMOOTH
+		{
+			ret($start+$delta*-(cos(($value-$start_value)/$duration*M_PI)-1)/2)
+		}
+		else{if $curve==CURVE_HARD
+		{
+			if $value<$start_value+$duration div 2
+			{
+				ret($start)
+			}
+			else
+			{
+				ret($end)
+			}
+		}
+		else{if $curve==CURVE_FAST
+		{
+			ret($start+$delta*(1-pow(1-($value-$start_value)/$duration, 2)))
+		}
+		else{if $curve==CURVE_SLOW
+		{
+			ret($start+$delta*pow(($value-$start_value)/$duration, 2))
+		}}}}}
+	//}}
+}
+/*fn fcircle($x, $y, $radius, $color)
+{
+	$vertices=new(8, 32, INT16)
+	$triangles=new(8, 30, INT32)
+	clean($vertices)
+	clean($triangles)
+	$a=0 while $a!=32
+	{
+		$vertices[0, $a]=cos($a/16*M_PI)*$radius+$x
+		$vertices[1, $a]=sin($a/16*M_PI)*$radius+$y
+		$a+1
+	}
+	$a=0 while $a!=30
+	{
+		$triangles[1, $a]=$a+1
+		$triangles[2, $a]=$a+2
+		//logf("first=%d; second=%d; third=%d;\n", $triangles[0, $a], $triangles[1, $a], $triangles[2, $a])
+		$triangles[3, $a]=$color
+		$triangles[4, $a]=-1
+		$triangles[5, $a]=255
+		$triangles[7, $a]=$a
+		$a+1
+	}
+	triangles3d($vertices, $triangles, 32)
+	remove($vertices)
+	remove($triangles)
+}*/
+fn get_vector_angle($x, $y)
+{
+	$module=sqrt($x*$x+$y*$y)
+	if $module==0
+	{
+		ret
+	}
+	$x/$module
+	$y/$module
+	if $x<0
+	{
+		if $y<0
+		{
+			ret(asin($x)+1.5*M_PI)
+		}
+		else
+		{
+			ret(acos($x))
+		}
+	}
+	else
+	{
+		if $y<0
+		{
+			ret(asin($y)+2*M_PI)
+		}
+		else
+		{
+			ret(asin($y))
+		}
+	}
+}
