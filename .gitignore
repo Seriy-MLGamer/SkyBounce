@@ -1,0 +1,10 @@
+# PixiLang source code
+	*.pixi
+# Main PixiLang source code
+	Boot.pixi
+# PixiLang source code recommended for include
+	*.pixih
+# PixiLang bytecode
+	*.pixicode
+# Main PixiLang bytecode
+	Boot.pixicode
