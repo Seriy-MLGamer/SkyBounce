@@ -5,20 +5,20 @@ meter_size=100
 ball_size=.5
 atmosphere_height=200
 gravity=9.8
-press_gravity=100
+press_gravity=gravity*8
 physics_update_frequency=1000
 
-generation_size=8192
+generation_size=16384
 generation_chunk_size=1024
 generation_start_speed=8
 generation_acceleration=.01
-generation_damping=.995
+generation_damping=.997
 
 star_count=1000
 
 menu_camera_y=-atmosphere_height-WINDOW_YSIZE div 2/meter_size
-camera_scale=.5
-camera_x=6
+camera_scale=.2
+camera_x=3
 camera_y=menu_camera_y
 
 texture=new(WINDOW_XSIZE, WINDOW_YSIZE)
@@ -43,14 +43,19 @@ fn gl_callback()
 				generation_offset+generation_chunk_size
 				//op_cn(OP_COPY, generation, 8192, )
 			}
-			generation_next_y+(rand()-16384)/32768*(generation_start_speed+generation_x/meter_size*generation_acceleration)
-			generation_acceleration2=2*(generation_next_y-generation_prev_y-generation_speed*generation_chunk_size)/generation_chunk_size/generation_chunk_size
+			generation_speed=(rand()-16384)/32768*(generation_start_speed+generation_x/meter_size*generation_acceleration)
+			while generation_next_y+generation_speed>=100||generation_next_y+generation_speed<-200
+			{
+				generation_speed=(rand()-16384)/32768*(generation_start_speed+generation_x/meter_size*generation_acceleration)
+			}
+			generation_next_y+generation_speed
+			generation_acceleration2=2*(generation_next_y-generation_prev_y-generation_speed2*generation_chunk_size)/generation_chunk_size/generation_chunk_size
 			a=0 while a!=generation_chunk_size
 			{
 				generation[generation_x-generation_offset+a]=generation_y
-				generation_speed+generation_acceleration2
-				generation_speed*generation_damping
-				generation_y+generation_speed
+				generation_speed2+generation_acceleration2
+				generation_speed2*generation_damping
+				generation_y+generation_speed2
 				a+1
 			}
 			generation_prev_y=generation_y
@@ -67,12 +72,12 @@ fn gl_callback()
 		particles_render(0b110)
 		a=-WINDOW_XSIZE div 2 while a!=WINDOW_XSIZE div 2
 		{
-			line(a, (generation[a/camera_scale+camera_x*meter_size-generation_offset]-camera_y)*meter_size*camera_scale, a, WINDOW_YSIZE div 2, 0)
+			line(a, (generation[a/camera_scale+camera_x*meter_size-generation_offset]-camera_y)*meter_size*camera_scale, a, WINDOW_YSIZE div 2, #804000)
 			a+1
 		}
-		draw_ball(255, 255, 0, 255)
+		draw_ball(192, 192, 0, 255)
 		sprintf(0, "X speed: %f\nY speed: %f\nSpeed module: %f", x_speed, y_speed, sqrt(x_speed*x_speed+y_speed*y_speed))
-		print(0, -WINDOW_XSIZE div 2, -WINDOW_YSIZE div 2, 0, TOP|LEFT)
+		print(0, -WINDOW_XSIZE div 2, -WINDOW_YSIZE div 2, GREEN, TOP|LEFT)
 		while physic_frames!=floor(time/1000*physics_update_frequency)
 		{
 			if floor(rand()/32768*.125*camera_scale*camera_scale*physics_update_frequency)==0
@@ -90,35 +95,42 @@ fn gl_callback()
 						vector_angle=get_vector_angle(1/meter_size, generation[b+1]-generation[b])
 						vector_x=x_speed*cos(-vector_angle)-y_speed*sin(-vector_angle)
 						vector_y=y_speed*cos(-vector_angle)+x_speed*sin(-vector_angle)
-						vector_y*-.9
+						if vector_y>=50
+						{
+							crush=1
+						}
+						vector_y*-.1
 						x_speed=vector_x*cos(vector_angle)-vector_y*sin(vector_angle)
 						y_speed=vector_y*cos(vector_angle)+vector_x*sin(vector_angle)
-						if acceleration
+						if ball_acceleration&&acceleration
 						{
-							x_speed+100/physics_update_frequency
+							x_speed+50/physics_update_frequency
 						}
 					}
 					a+1
 				}
 				x+x_speed/physics_update_frequency
 				y+y_speed/physics_update_frequency
-				camera_x=x+6
-				camera_y=y+3
+				if !crush
+				{
+					camera_x=x+3
+					camera_y=y//+3
+				}
 				if sqrt(x_speed*x_speed+y_speed*y_speed)>=100
 				{
 					new_particle(x, y, 1, 0)
 					if y>=-200
 					{
-					x_speed/crossfade(y, 1, 1.0002, -200, 200, CURVE_SLOW)
-					y_speed/crossfade(y, 1, 1.0002, -200, 200, CURVE_SLOW)
+					x_speed/crossfade(y, 1, 1.0002, -atmosphere_height, atmosphere_height, CURVE_SLOW)
+					y_speed/crossfade(y, 1, 1.0002, -atmosphere_height, atmosphere_height, CURVE_SLOW)
 					}
 				}
 				else
 				{
 					if y>=-200
 					{
-					x_speed/crossfade(y, 1, 1.00005, -200, 200, CURVE_SLOW)
-					y_speed/crossfade(y, 1, 1.00005, -200, 200, CURVE_SLOW)
+					x_speed/crossfade(y, 1, 1.00005, -atmosphere_height, atmosphere_height, CURVE_SLOW)
+					y_speed/crossfade(y, 1, 1.00005, -atmosphere_height, atmosphere_height, CURVE_SLOW)
 					}
 				}
 				if acceleration
@@ -280,7 +292,7 @@ while 1
 		generation_prev_y=0
 		generation_y=0
 		generation_next_y=0
-		generation_speed=0
+		generation_speed2=0
 		physic_frames=0
 		start_timer()
 		while 1
@@ -458,7 +470,15 @@ fn particles_render($types)
 			{
 				$scaled=ball_size*meter_size*camera_scale*crossfade(physic_frames, 1, crossfade(sqrt(x_speed*x_speed+y_speed*y_speed), 4, 4, 100, 200, CURVE_LINEAR), particles[8, $a], particles[9, $a], CURVE_LINEAR)/M_SQRT2
 				$fade=crossfade(sqrt(x_speed*x_speed+y_speed*y_speed), 256, 0, 200, 100, CURVE_FAST)
-				draw_square_particle($scaled_x, $scaled_y, $scaled, particles[3, $a]+crossfade(physic_frames, 0, particles[7, $a], particles[8, $a], physics_update_frequency, CURVE_LINEAR), 255, 128+$fade/2, $fade, crossfade(physic_frames, 256, 0, particles[8, $a], particles[9, $a], CURVE_LINEAR))
+				if particles[2, $a]>=0
+				{
+					$height=256
+				}
+				else
+				{
+					$height=crossfade(particles[2, $a], 0, 256, -atmosphere_height, atmosphere_height, CURVE_FAST)
+				}
+				draw_square_particle($scaled_x, $scaled_y, $scaled, particles[3, $a]+crossfade(physic_frames, 0, particles[7, $a], particles[8, $a], physics_update_frequency, CURVE_LINEAR), 255, 128+$fade/2, $fade, crossfade(physic_frames, $height, 0, particles[8, $a], particles[9, $a], CURVE_LINEAR))
 			}
 			else{if $types==0||$types&0b100&&particles[0, $a]==2
 			{
