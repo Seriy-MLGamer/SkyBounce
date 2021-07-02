@@ -1,0 +1,44 @@
+frequency=4096
+resonance=0.001
+
+strength=pow(frequency*2*M_PI, 2)
+fn audio_callback($unused1, $unused2, $buffer, $buffer_size)
+{
+	$a=0 while $a!=$buffer_size
+	{
+		$buffer[0][$a]=position
+		$value=(rand()/16384-1)*.1
+		velocity+strength*($value-position)/get_audio_sample_rate(0)
+		velocity*pow(resonance, 10000/get_audio_sample_rate(0))
+		position+velocity/get_audio_sample_rate(0)
+		$a+1
+	}
+	copy(buffer, buffer, 0, $buffer_size)
+	copy(buffer, $buffer[0], get_size(buffer)-$buffer_size, 0)
+	ret(1)
+}
+buffer=new(1024, 1, FLOAT32)
+set_audio_callback(audio_callback, 0, 0, FLOAT32, 1)
+while 1
+{
+	clear()
+	a=-WINDOW_XSIZE div 2 while a!=WINDOW_XSIZE div 2
+	{
+		line(a, buffer[(a/WINDOW_XSIZE+.5)*get_size(buffer)]*WINDOW_YSIZE div 2, a, 0)
+		a+1
+	}
+	frame()
+	while get_event()
+	{
+		if EVT[EVT_TYPE]==EVT_QUIT
+		{
+			halt
+		}
+		if EVT[EVT_TYPE]==EVT_MOUSEBUTTONDOWN||EVT[EVT_TYPE]==EVT_MOUSEMOVE
+		{
+			frequency=(EVT[EVT_X]/WINDOW_XSIZE+.5)*8192
+			strength=pow(frequency*2*M_PI, 2)
+			resonance=-(EVT[EVT_Y]/WINDOW_YSIZE-.5)*.05
+		}
+	}
+}

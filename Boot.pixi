@@ -1,4 +1,4 @@
-include "include/mlg buttons.pixih"
+include "include/mlg user interface.pixih"
 include "include/mlg easy programming.pixih"
 
 meter_size=100
@@ -8,22 +8,22 @@ gravity=9.8
 press_gravity=gravity*8
 physics_update_frequency=1000
 
-generation_size=16384
-generation_chunk_size=1024
+generation_size=15000
+generation_chunk_size=1500
 generation_start_speed=8
 generation_acceleration=.01
-generation_damping=.997
+generation_damping=.998
 
 star_count=1000
 
 menu_camera_y=-atmosphere_height-WINDOW_YSIZE div 2/meter_size
 camera_scale=.2
-camera_x=3
+camera_x=6
 camera_y=menu_camera_y
 
 texture=new(WINDOW_XSIZE, WINDOW_YSIZE)
 clean(texture)
-particles=new(10, 256, FLOAT)
+particles=new(10, 512, FLOAT)
 clean(particles)
 particles_index=0
 halo=load("assets/halo.png")
@@ -41,7 +41,6 @@ fn gl_callback()
 			{
 				copy(generation, generation, 0, generation_chunk_size, generation_size)
 				generation_offset+generation_chunk_size
-				//op_cn(OP_COPY, generation, 8192, )
 			}
 			generation_speed=(rand()-16384)/32768*(generation_start_speed+generation_x/meter_size*generation_acceleration)
 			while generation_next_y+generation_speed>=100||generation_next_y+generation_speed<-200
@@ -64,7 +63,7 @@ fn gl_callback()
 		}
 		if time<1000
 		{
-			camera_y=crossfade(time, menu_camera_y/2, -1, 0, 1000, CURVE_FAST)
+			camera_y=crossfade(time, menu_camera_y/2, 2, 0, 1000, CURVE_FAST)
 		}
 		pixi(texture, 0, 0)
 		particles_render(0b001)
@@ -72,10 +71,10 @@ fn gl_callback()
 		particles_render(0b110)
 		a=-WINDOW_XSIZE div 2 while a!=WINDOW_XSIZE div 2
 		{
-			line(a, (generation[a/camera_scale+camera_x*meter_size-generation_offset]-camera_y)*meter_size*camera_scale, a, WINDOW_YSIZE div 2, #804000)
+			line(a, (generation[a/camera_scale+camera_x*meter_size-generation_offset]-camera_y)*meter_size*camera_scale, a, WINDOW_YSIZE div 2, #000000)
 			a+1
 		}
-		draw_ball(192, 192, 0, 255)
+		draw_ball(255, 0, 0, 255)
 		sprintf(0, "X speed: %f\nY speed: %f\nSpeed module: %f", x_speed, y_speed, sqrt(x_speed*x_speed+y_speed*y_speed))
 		print(0, -WINDOW_XSIZE div 2, -WINDOW_YSIZE div 2, GREEN, TOP|LEFT)
 		while physic_frames!=floor(time/1000*physics_update_frequency)
@@ -91,13 +90,14 @@ fn gl_callback()
 					b=(x+cos(a/16*M_PI)*ball_size/2)*meter_size-generation_offset
 					if y+sin(a/16*M_PI)*ball_size/2>=crossfade(b, generation[b], generation[b+1], floor(b), 1, CURVE_LINEAR)
 					{
-						y=crossfade(b, generation[b], generation[b+1], floor(b), 1, CURVE_LINEAR)-sin(a/16*M_PI)*ball_size/2
 						vector_angle=get_vector_angle(1/meter_size, generation[b+1]-generation[b])
 						vector_x=x_speed*cos(-vector_angle)-y_speed*sin(-vector_angle)
 						vector_y=y_speed*cos(-vector_angle)+x_speed*sin(-vector_angle)
 						if vector_y>=50
 						{
 							crush=1
+							camera_x=x+6
+							camera_y=y+3
 						}
 						vector_y*-.1
 						x_speed=vector_x*cos(vector_angle)-vector_y*sin(vector_angle)
@@ -106,6 +106,7 @@ fn gl_callback()
 						{
 							x_speed+50/physics_update_frequency
 						}
+						y=crossfade(b, generation[b], generation[b+1], floor(b), 1, CURVE_LINEAR)-sin(a/16*M_PI)*ball_size/2
 					}
 					a+1
 				}
@@ -113,8 +114,12 @@ fn gl_callback()
 				y+y_speed/physics_update_frequency
 				if !crush
 				{
-					camera_x=x+3
-					camera_y=y//+3
+					camera_speed_x+1000*(x+6-camera_x)/physics_update_frequency
+					camera_speed_x*pow(.98, 1000/physics_update_frequency)
+					camera_speed_y+1000*(y+3-camera_y)/physics_update_frequency
+					camera_speed_y*pow(.98, 1000/physics_update_frequency)
+					camera_x+camera_speed_x/physics_update_frequency
+					camera_y+camera_speed_y/physics_update_frequency
 				}
 				if sqrt(x_speed*x_speed+y_speed*y_speed)>=100
 				{
@@ -280,6 +285,8 @@ while 1
 {
 	if scene
 	{
+		camera_speed_x=0
+		camera_speed_y=0
 		x=0
 		y=-1
 		x_speed=0
@@ -302,7 +309,7 @@ while 1
 			{
 				if EVT[EVT_TYPE]==EVT_QUIT
 				{
-					halt
+					exit()
 				}
 				if time>=1000
 				{
@@ -342,7 +349,7 @@ while 1
 				}
 				if EVT[EVT_TYPE]==EVT_QUIT
 				{
-					halt
+					exit()
 				}
 			}
 			if scene_cross&&time>=timestamp

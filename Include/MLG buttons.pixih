@@ -1,5 +1,6 @@
-//"MLG buttons" library v1.0.0.
-//(C) Серый MLGamer, 2020.
+//"MLG user interface" library v1.0.0.
+//(C) Серый MLGamer, 2021.
+//MIT license.
 
 
 BUTTON_TYPE_STANDARD=0
@@ -7,156 +8,156 @@ BUTTON_TYPE_SWITCH=1
 BUTTON_TYPE_SELECT=2
 fn new_button($x, $y, $width, $height, $type)
 {
-	$button_container=new()
+	$button=new()
 	//User defined data.
-	$button_container.x=$x
-	$button_container.y=$y
-	$button_container.width=$width
-	$button_container.height=$height
-	$button_container.type=$type
+	$button.x=$x
+	$button.y=$y
+	$button.width=$width
+	$button.height=$height
+	$button.type=$type
 	//This data probably will stay in same values. But you can change this values before using this function.
-	$button_container.active=1
-	$button_container.entered=0
-	$button_container.pressed=0
+	$button.active=1
+	$button.entered=0
+	$button.pressed=0
 	if $type==BUTTON_TYPE_SWITCH
 	{
-		$button_container.switch_state=0
+		$button.switch_state=0
 	}
 	if $type==BUTTON_TYPE_SELECT
 	{
-		$button_container.selected=0
+		$button.selected=0
 	}
 	if !MOBILE
 	{
-		$button_container.mouse_key=KEY_MOUSE_LEFT
-		$button_container.keyboard_key=0
+		$button.mouse_key=KEY_MOUSE_LEFT
+		$button.keyboard_key=0
 	}
-	$button_container.main_event=EVT_BUTTONUP
-	ret($button_container)
+	$button.main_event=EVT_BUTTONUP
+	ret($button)
 }
-fn get_button_event($button_container, $function, $arguments)
+fn get_button_event($button, $function, $arguments)
 {
-	if $button_container.active
+	if $button.active
 	{
 		$do_it=0
-		if EVT[EVT_KEY]==$button_container.keyboard_key
+		if EVT[EVT_KEY]==$button.keyboard_key
 		{
 			if EVT[EVT_TYPE]==EVT_BUTTONDOWN
 			{
-				$button_container.pressed=2
-				if !$button_container.entered
+				$button.pressed=2
+				if !$button.entered
 				{
-					$button_container.entered=2
+					$button.entered=2
 				}
-				if $button_container.main_event==EVT_BUTTONDOWN
+				if $button.main_event==EVT_BUTTONDOWN
 				{
 					$do_it=1
 				}
 			}
 			if EVT[EVT_TYPE]==EVT_BUTTONUP
 			{
-				$button_container.pressed=0
-				if $button_container.main_event==EVT_BUTTONUP
+				$button.pressed=0
+				if $button.main_event==EVT_BUTTONUP
 				{
 					$do_it=1
 				}
-				else{if $button_container.entered==2
+				else{if $button.entered==2
 				{
-					$button_container.entered=0
+					$button.entered=0
 				}}
 			}
 		}
-		if EVT[EVT_X]>=$button_container.x&&EVT[EVT_X]<$button_container.x+$button_container.width&&EVT[EVT_Y]>=$button_container.y&&EVT[EVT_Y]<$button_container.y+$button_container.height
+		if EVT[EVT_X]>=$button.x&&EVT[EVT_X]<$button.x+$button.width&&EVT[EVT_Y]>=$button.y&&EVT[EVT_Y]<$button.y+$button.height
 		{
-			if MOBILE||EVT[EVT_KEY]==$button_container.mouse_key
+			if MOBILE||EVT[EVT_KEY]==$button.mouse_key
 			{
 				if EVT[EVT_TYPE]==EVT_MOUSEBUTTONDOWN||EVT[EVT_TYPE]==EVT_TOUCHBEGIN
 				{
-					$button_container.scancode=EVT[EVT_SCANCODE]
-					$button_container.pressed=1
-					$button_container.entered=1
-					if $button_container.main_event==EVT_BUTTONDOWN
+					$button.scancode=EVT[EVT_SCANCODE]
+					$button.pressed=1
+					$button.entered=1
+					if $button.main_event==EVT_BUTTONDOWN
 					{
 						$do_it=1
 					}
 				}
-				if EVT[EVT_TYPE]==EVT_MOUSEBUTTONUP||EVT[EVT_TYPE]==EVT_TOUCHEND&&EVT[EVT_SCANCODE]==$button_container.scancode
+				if EVT[EVT_TYPE]==EVT_MOUSEBUTTONUP||EVT[EVT_TYPE]==EVT_TOUCHEND&&EVT[EVT_SCANCODE]==$button.scancode
 				{
-					if $button_container.pressed
+					if $button.pressed
 					{
-						$button_container.pressed=0
-						if $button_container.main_event==EVT_BUTTONUP
+						$button.pressed=0
+						if $button.main_event==EVT_BUTTONUP
 						{
 							$do_it=1
 						}
 						else{if MOBILE
 						{
-							$button_container.entered=0
+							$button.entered=0
 						}}
 					}
 					else{if MOBILE
 					{
-						$button_container.entered=0
+						$button.entered=0
 					}}
 				}
 			}
 			if EVT[EVT_TYPE]==EVT_MOUSEMOVE||EVT[EVT_TYPE]==EVT_TOUCHMOVE
 			{
-				$button_container.entered=1
+				$button.entered=1
 			}
 		}
 		else{if EVT[EVT_TYPE]==EVT_TOUCHMOVE||EVT[EVT_TYPE]==EVT_MOUSEMOVE
 		{
-			if $button_container.pressed==2
+			if $button.pressed==2
 			{
-				$button_container.entered=2
+				$button.entered=2
 			}
 			else
 			{
-				$button_container.entered=0
-				$button_container.pressed=0
+				$button.entered=0
+				$button.pressed=0
 			}
 		}}
 		if $do_it
 		{
-			if $button_container.type==BUTTON_TYPE_SWITCH
+			if $button.type==BUTTON_TYPE_SWITCH
 			{
-				$button_container.switch_state^1
+				$button.switch_state^1
 			}
-			$function($button_container, $arguments)
-			if $button_container.type==BUTTON_TYPE_SELECT
+			$function($button, $arguments)
+			if $button.type==BUTTON_TYPE_SELECT
 			{
-				$button_container.selected=1
+				$button.selected=1
 			}
-			if MOBILE&&$button_container.entered==1&&EVT[EVT_TYPE]!=EVT_BUTTONUP||$button_container.entered==2&&$button_container.main_event==EVT_BUTTONUP
+			if MOBILE&&$button.entered==1&&EVT[EVT_TYPE]!=EVT_BUTTONUP||$button.entered==2&&$button.main_event==EVT_BUTTONUP
 			{
-				$button_container.entered=0
+				$button.entered=0
 			}
 		}
 	}
 }
-fn draw_button($button_container, $color, $button_text, $text_align, $text_scale)
+fn draw_button($button, $color, $button_text, $text_align, $text_scale)
 {
 	$border_alpha=255
 	$body_alpha=64
 	$normal=0
-	if $button_container.active
+	if $button.active
 	{
-		if $button_container.type==BUTTON_TYPE_STANDARD
+		if $button.type==BUTTON_TYPE_STANDARD
 		{
 			$normal=1
 		}
-		if $button_container.type==BUTTON_TYPE_SWITCH
+		if $button.type==BUTTON_TYPE_SWITCH
 		{
-			if $button_container.switch_state
+			if $button.switch_state
 			{
 				$body_alpha=128
-				if $button_container.pressed
+				if $button.pressed
 				{
 					$button_color=get_color(get_red($color)/255*128, get_green($color)/255*128, get_blue($color)/255*128)
 					$text_color=get_color(get_red($color)/255*64, get_green($color)/255*64, get_blue($color)/255*64)
 				}
-				else{if $button_container.entered
+				else{if $button.entered
 				{
 					$button_color=get_color(get_red($color)/256*96+128, get_green($color)/256*96+128, get_blue($color)/256*96+128)
 					$text_color=get_color(get_red($color)/255*128, get_green($color)/255*128, get_blue($color)/255*128)
@@ -172,16 +173,16 @@ fn draw_button($button_container, $color, $button_text, $text_align, $text_scale
 				$normal=1
 			}
 		}
-		if $button_container.type==BUTTON_TYPE_SELECT
+		if $button.type==BUTTON_TYPE_SELECT
 		{
-			if $button_container.selected|$button_container.pressed
+			if $button.selected|$button.pressed
 			{
 				$normal=1
 			}
 			else
 			{
 				$border_alpha=0
-				if $button_container.entered
+				if $button.entered
 				{
 					$button_color=get_color(get_red($color)/256*128+128, get_green($color)/256*128+128, get_blue($color)/256*128+128)
 					$text_color=get_color(get_red($color)/255*64, get_green($color)/255*64, get_blue($color)/255*64)
@@ -195,12 +196,12 @@ fn draw_button($button_container, $color, $button_text, $text_align, $text_scale
 		}
 		if $normal
 		{
-			if $button_container.pressed
+			if $button.pressed
 			{
 				$button_color=get_color(get_red($color)/255*128, get_green($color)/255*128, get_blue($color)/255*128)
 				$text_color=get_color(get_red($color)/255*64, get_green($color)/255*64, get_blue($color)/255*64)
 			}
-			else{if $button_container.entered
+			else{if $button.entered
 			{
 				$button_color=get_color(get_red($color)/256*128+128, get_green($color)/256*128+128, get_blue($color)/256*128+128)
 				$text_color=get_color(get_red($color)/255*128, get_green($color)/255*128, get_blue($color)/255*128)
@@ -221,35 +222,35 @@ fn draw_button($button_container, $color, $button_text, $text_align, $text_scale
 	if $body_alpha!=0
 	{
 		transp($transp/255*$body_alpha)
-		fbox($button_container.x+1, $button_container.y+1, $button_container.width-2, $button_container.height-2, $button_color)
+		fbox($button.x+1, $button.y+1, $button.width-2, $button.height-2, $button_color)
 	}
-	$text_x=$button_container.x+$button_container.width/2
-	$text_y=$button_container.y+$button_container.height/2
+	$text_x=$button.x+$button.width/2
+	$text_y=$button.y+$button.height/2
 	if ($text_align&RIGHT)==RIGHT
 	{
-		$text_x+($button_container.width/2-2)
+		$text_x+($button.width/2-2)
 	}
 	if ($text_align&BOTTOM)==BOTTOM
 	{
-		$text_y+($button_container.height/2-2)
+		$text_y+($button.height/2-2)
 	}
 	if ($text_align&LEFT)==LEFT
 	{
-		$text_x+(-$button_container.width/2+1)
+		$text_x+(-$button.width/2+1)
 	}
 	if ($text_align&TOP)==TOP
 	{
-		$text_y+(-$button_container.height/2+1)
+		$text_y+(-$button.height/2+1)
 	}
 	transp($transp)
 	//adv_print($button_text, $text_x, $text_y, 1, $text_color, 1, #000000, 0, $text_align, $width-2) //Вот из-за чего нужно подключить библиотеку "MLG advanced text tools.pixilib".
 	t_scale($text_scale, $text_scale, 1)
-	print($button_text, $text_x/$text_scale, $text_y/$text_scale, $text_color, $text_align, ($button_container.width-2)/4)
+	print($button_text, $text_x/$text_scale, $text_y/$text_scale, $text_color, $text_align, ($button.width-2)/4)
 	t_reset()
 	if $border_alpha!=0
 	{
 		transp($transp/255*$border_alpha)
-		box($button_container.x, $button_container.y, $button_container.width-1, $button_container.height-1, $button_color)
+		box($button.x, $button.y, $button.width-1, $button.height-1, $button_color)
 		transp($transp)
 	}
 }
