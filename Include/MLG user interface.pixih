@@ -3,27 +3,33 @@
 //MIT license.
 
 
-BUTTON_TYPE_STANDARD=0
-BUTTON_TYPE_SWITCH=1
-BUTTON_TYPE_SELECT=2
+BUTTON_STANDARD=0
+BUTTON_SWITCH=1
+BUTTON_SELECT=2
+WINDOW_STANDARD=0
+WINDOW_DIALOGUE=1
+WINDOW_ALERT=2
+WINDOW_FLAG_DRAGGABLE=0b1
+WINDOW_FLAG_RESIZEABLE=0b10
+WINDOW_FLAG_NOTITLE=0b100
+
 fn new_button($x, $y, $width, $height, $type)
 {
 	$button=new()
-	//User defined data.
 	$button.x=$x
 	$button.y=$y
 	$button.width=$width
 	$button.height=$height
 	$button.type=$type
-	//This data probably will stay in same values. But you can change this values before using this function.
+
 	$button.active=1
 	$button.entered=0
 	$button.pressed=0
-	if $type==BUTTON_TYPE_SWITCH
+	if $type==BUTTON_SWITCH
 	{
 		$button.switch_state=0
 	}
-	if $type==BUTTON_TYPE_SELECT
+	if $type==BUTTON_SELECT
 	{
 		$button.selected=0
 	}
@@ -35,8 +41,53 @@ fn new_button($x, $y, $width, $height, $type)
 	$button.main_event=EVT_BUTTONUP
 	ret($button)
 }
+fn new_window($title, $x, $y, $width, $height, $type, $flags)
+{
+	$window=new()
+	$window.title=$title
+	$window.x=$x
+	$window.y=$y
+	$window.width=$width
+	$window.height=$height
+	$window.type=$type
+	$window.flags=$flags
+
+	$window.buttons=new(1, 1, INT)
+	clean($window.buttons)
+	$window.texts=new(1, 1, INT)
+	clean($window.texts)
+	$window.images=new(1, 1, INT)
+	clean($window.images)
+	if $type==WINDOW_DIALOGUE
+	{
+		$ok=new_button()
+	}
+}
+fn bind_button($window, $button)
+{
+	if $window>0
+	{
+		$button.window=$window
+		$a=0 while $a!=get_size($window.buttons)&&$window.buttons[$a]!=0
+		{
+			$a+1
+		}
+		if $a==get_size($window.buttons)
+		{
+			resize($window.buttons, get_size($window.buttons)+1)
+		}
+		$window.buttons[$a]=$button
+	}
+}
 fn get_button_event($button, $function, $arguments)
 {
+	$x=$button.x
+	$y=$button.y
+	if $button.window>0
+	{
+		$x+$button.window.x+$button.window.width div 2
+		$y+$button.window.y+$button.window.height div 2
+	}
 	if $button.active
 	{
 		$do_it=0
@@ -67,7 +118,7 @@ fn get_button_event($button, $function, $arguments)
 				}}
 			}
 		}
-		if EVT[EVT_X]>=$button.x&&EVT[EVT_X]<$button.x+$button.width&&EVT[EVT_Y]>=$button.y&&EVT[EVT_Y]<$button.y+$button.height
+		if EVT[EVT_X]>=$x&&EVT[EVT_X]<$x+$button.width&&EVT[EVT_Y]>=$y&&EVT[EVT_Y]<$y+$button.height
 		{
 			if MOBILE||EVT[EVT_KEY]==$button.mouse_key
 			{
@@ -120,12 +171,12 @@ fn get_button_event($button, $function, $arguments)
 		}}
 		if $do_it
 		{
-			if $button.type==BUTTON_TYPE_SWITCH
+			if $button.type==BUTTON_SWITCH
 			{
 				$button.switch_state^1
 			}
 			$function($button, $arguments)
-			if $button.type==BUTTON_TYPE_SELECT
+			if $button.type==BUTTON_SELECT
 			{
 				$button.selected=1
 			}
@@ -138,16 +189,23 @@ fn get_button_event($button, $function, $arguments)
 }
 fn draw_button($button, $color, $button_text, $text_align, $text_scale)
 {
+	$x=$button.x
+	$y=$button.y
+	if $button.window>0
+	{
+		$x+$button.window.x+$button.window.width div 2
+		$y+$button.window.y+$button.window.height div 2
+	}
 	$border_alpha=255
 	$body_alpha=64
 	$normal=0
 	if $button.active
 	{
-		if $button.type==BUTTON_TYPE_STANDARD
+		if $button.type==BUTTON_STANDARD
 		{
 			$normal=1
 		}
-		if $button.type==BUTTON_TYPE_SWITCH
+		if $button.type==BUTTON_SWITCH
 		{
 			if $button.switch_state
 			{
@@ -173,7 +231,7 @@ fn draw_button($button, $color, $button_text, $text_align, $text_scale)
 				$normal=1
 			}
 		}
-		if $button.type==BUTTON_TYPE_SELECT
+		if $button.type==BUTTON_SELECT
 		{
 			if $button.selected|$button.pressed
 			{
@@ -222,10 +280,10 @@ fn draw_button($button, $color, $button_text, $text_align, $text_scale)
 	if $body_alpha!=0
 	{
 		transp($transp/255*$body_alpha)
-		fbox($button.x+1, $button.y+1, $button.width-2, $button.height-2, $button_color)
+		fbox($x+1, $y+1, $button.width-2, $button.height-2, $button_color)
 	}
-	$text_x=$button.x+$button.width/2
-	$text_y=$button.y+$button.height/2
+	$text_x=$x+$button.width/2
+	$text_y=$y+$button.height/2
 	if ($text_align&RIGHT)==RIGHT
 	{
 		$text_x+($button.width/2-2)
@@ -250,7 +308,7 @@ fn draw_button($button, $color, $button_text, $text_align, $text_scale)
 	if $border_alpha!=0
 	{
 		transp($transp/255*$border_alpha)
-		box($button.x, $button.y, $button.width-1, $button.height-1, $button_color)
+		box($x, $y, $button.width-1, $button.height-1, $button_color)
 		transp($transp)
 	}
 }

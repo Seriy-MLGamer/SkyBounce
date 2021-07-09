@@ -1,10 +1,19 @@
 MOBILE=1
-THREADS=1
+THREADS=8
 CURVE_LINEAR=0
 CURVE_SMOOTH=1
 CURVE_HARD=2
 CURVE_FAST=3
 CURVE_SLOW=4
+
+fn call_threads($thread_function)
+{
+	$a=0 while $a!=THREADS
+	{
+		logf("Number: %d.\n", thread_create($thread_function, $a, THREAD_FLAG_AUTO_DESTROY))
+		$a+1
+	}
+}
 fn crossfade($value, $start, $end, $start_value, $duration, $curve)
 {
 	$delta=$end-$start
