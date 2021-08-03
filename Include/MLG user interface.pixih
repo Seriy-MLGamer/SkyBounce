@@ -14,12 +14,11 @@ WINDOW_DIALOGUE=1
 WINDOW_ALERT=2
 WINDOW_FLAG_DRAGGABLE=0b1
 WINDOW_FLAG_RESIZEABLE=0b10
-WINDOW_FLAG_NOTITLE=0b100
 
 fn new_window($title, $x, $y, $width, $height, $type, $flags)
 {
 	$window=new()
-	$window.class="window"
+	$window.window=1
 
 	$window.x=$x
 	$window.y=$y
@@ -29,9 +28,12 @@ fn new_window($title, $x, $y, $width, $height, $type, $flags)
 	$window.flags=$flags
 
 	$window.align=0
-	$window.color=#00FFFF
+	$window.color=#80FFFF
+	$window.drag=0
+	$window.drag_x=0
+	$window.drag_y=0
 	$window.texts=new(1, 1, INT)
-	$window.texts[0]=new_text($title, 4, -37, $width-12, 4)
+	$window.texts[0]=new_text($title, 10, -55, $width-22, 6)
 	$window.texts[0].parent=$window
 	$window.texts[0].align=TOP|LEFT
 	$window.texts[0].text_align=TOP|LEFT
@@ -41,27 +43,28 @@ fn new_window($title, $x, $y, $width, $height, $type, $flags)
 	clean($window.buttons, -1)
 	if $type==WINDOW_DIALOGUE
 	{
-		$ok=new_button("OK", -110, -60, 100, 50, BUTTON_STANDARD)
-		if 0//strstr(LANG_NAME, "ru_RU")==0
+		$ok=new_button("OK", -210, -110, 200, 100, BUTTON_STANDARD)
+		if 0//strstr(LANG_NAME, "ru_")==0
 		{
-			$cancel=new_button("Отмена", -220, -60, 100, 50, BUTTON_STANDARD)
+			$cancel=new_button("Отмена", -420, -110, 200, 100, BUTTON_STANDARD)
 		}
 		else
 		{
-			$cancel=new_button("Cancel", -220, -60, 100, 50, BUTTON_STANDARD)
+			$cancel=new_button("Cancel", -420, -110, 200, 100, BUTTON_STANDARD)
 		}
 		$ok.align=RIGHT|BOTTOM
 		$cancel.align=RIGHT|BOTTOM
-		set_button_callback($ok, {ret(1)}, 0)
-		set_button_callback($cancel, {ret(0)}, 0)
+		set_button_callback($ok, {ret(0x80000001)}, 0)
+		set_button_callback($cancel, {ret(0x80000000)}, 0)
 		bind_button($ok, $window)
 		bind_button($cancel, $window)
 	}
 	else{if $type==WINDOW_ALERT
 	{
-		$ok=new_button("OK", -110, -60, 100, 50, BUTTON_STANDARD)
+		$ok=new_button("OK", -210, -110, 200, 100, BUTTON_STANDARD)
 		$ok.align=RIGHT|BOTTOM
 		bind_button($ok, $window)
+		set_button_callback($ok, {ret(1)}, 0)
 	}}
 	ret($window)
 }
@@ -88,7 +91,7 @@ fn remove_window($window)
 fn new_text($string, $x, $y, $width, $size)
 {
 	$text=new()
-	$text.class="text"
+	$text.text=1
 
 	$text.string=$string
 	$text.x=$x
@@ -123,9 +126,9 @@ fn remove_text($text)
 fn new_button($title, $x, $y, $width, $height, $type)
 {
 	$button=new()
-	$button.class="button"
+	$button.button=1
 
-	$button.title=new_text($title, 0, 0, $width-2, 2)
+	$button.title=new_text($title, 0, 0, $width-2, 4)
 	$button.title.parent=$button
 	$button.x=$x
 	$button.y=$y
@@ -133,7 +136,7 @@ fn new_button($title, $x, $y, $width, $height, $type)
 	$button.height=$height
 
 	$button.align=0
-	$button.window=-1
+	$button.parent=-1
 	$button.type=$type
 	$button.color=#00FFFF
 	$button.active=1
@@ -187,7 +190,7 @@ fn bind_text($text, $window)
 }
 fn unbind_text($text, $window)
 {
-	if $window>=0&&$text>=0&&strcmp($window.class, "window")==0
+	if $window>=0&&$text>=0&&$window.window
 	{
 		$a=0 while $a!=get_size($window.texts)&&$window.texts[$a]==$text
 		{
@@ -204,7 +207,7 @@ fn bind_button($button, $window)
 {
 	if $window>=0&&$button>=0
 	{
-		$button.window=$window
+		$button.parent=$window
 		$a=0 while $a!=get_size($window.buttons)&&$window.buttons[$a]>=0
 		{
 			$a+1
@@ -242,146 +245,47 @@ fn set_button_callback($button, $function, $arguments)
 fn get_global_x($object)
 {
 	$x=$object.x
-	if strcmp($object.class, "button")==0
+	if $object.window
 	{
-		if $object.window>=0
-		{
-			$x+get_global_x($object.window)
-			$x+1+($object.window.width-2)div 2
-			if $object.align&LEFT
-			{
-				$x-($object.window.width-2)div 2
-			}
-			if $object.align&RIGHT
-			{
-				$x+($object.window.width-2)div 2
-			}
-		}
-		else
-		{
-			if $object.align&LEFT
-			{
-				$x-WINDOW_XSIZE div 2
-			}
-			if $object.align&RIGHT
-			{
-				$x+WINDOW_XSIZE div 2
-			}
-		}
-	}
-	else{if strcmp($object.class, "text")==0
-	{
-		if $object.parent>=0
-		{
-			$x+get_global_x($object.parent)
-			$x+1+($object.parent.width-2)div 2
-			if $object.align&LEFT
-			{
-				$x-($object.parent.width-2)div 2
-			}
-			if $object.align&RIGHT
-			{
-				$x+($object.parent.width-2)div 2
-			}
-		}
-		else
-		{
-			if $object.align&LEFT
-			{
-				$x-WINDOW_XSIZE div 2
-			}
-			if $object.align&RIGHT
-			{
-				$x+WINDOW_XSIZE div 2
-			}
-		}
-	}
-	else{if strcmp($object.class, "window")==0
-	{
-		if $object.window.align&LEFT
+		if $object.align&LEFT
 		{
 			$x-WINDOW_XSIZE div 2
 		}
-		if $object.window.align&RIGHT
+		if $object.align&RIGHT
 		{
 			$x+WINDOW_XSIZE div 2
 		}
-	}}}
+	}
+	else{if $object.parent>=0
+	{
+		$x+get_global_x($object.parent)
+		$x+1+($object.parent.width-2)div 2
+		if $object.align&LEFT
+		{
+			$x-($object.parent.width-2)div 2
+		}
+		if $object.align&RIGHT
+		{
+			$x+($object.parent.width-2)div 2
+		}
+	}
+	else
+	{
+		if $object.align&LEFT
+		{
+			$x-WINDOW_XSIZE div 2
+		}
+		if $object.align&RIGHT
+		{
+			$x+WINDOW_XSIZE div 2
+		}
+	}}
 	ret($x)
 }
 fn get_global_y($object)
 {
 	$y=$object.y
-	if strcmp($object.class, "button")==0
-	{
-		if $object.window>=0
-		{
-			$y+get_global_y($object.window)
-			$y+42+($object.window.height-43)div 2
-			if $object.align&TOP
-			{
-				$y-($object.window.height-43)div 2
-			}
-			if $object.align&BOTTOM
-			{
-				$y+($object.window.height-43)div 2
-			}
-		}
-		else
-		{
-			if $object.align&TOP
-			{
-				$y-WINDOW_YSIZE div 2
-			}
-			if $object.align&BOTTOM
-			{
-				$y+WINDOW_YSIZE div 2
-			}
-		}
-	}
-	else{if strcmp($object.class, "text")==0
-	{
-		if $object.parent>=0
-		{
-			$y+get_global_y($object.parent)
-			if strcmp($object.parent.class, "button")==0
-			{
-				$y+1+($object.parent.height-2)div 2
-				if $object.align&TOP
-				{
-					$y-($object.parent.height-2)div 2
-				}
-				if $object.align&BOTTOM
-				{
-					$y+($object.parent.height-2)div 2
-				}
-			}
-			else{if strcmp($object.parent.class, "window")==0
-			{
-				$y+42+($object.parent.height-43)div 2
-				if $object.align&TOP
-				{
-					$y-($object.parent.height-43)div 2
-				}
-				if $object.align&BOTTOM
-				{
-					$y+($object.parent.height-43)div 2
-				}
-			}}
-		}
-		else
-		{
-			if $object.align&TOP
-			{
-				$y-WINDOW_YSIZE div 2
-			}
-			if $object.align&BOTTOM
-			{
-				$y+WINDOW_YSIZE div 2
-			}
-		}
-	}
-	else{if strcmp($object.class, "window")==0
+	if $object.window
 	{
 		if $object.window.align&TOP
 		{
@@ -391,8 +295,85 @@ fn get_global_y($object)
 		{
 			$y+WINDOW_YSIZE div 2
 		}
-	}}}
+	}
+	else{if $object.parent>=0
+	{
+		$y+get_global_y($object.parent)
+		$y+1+($object.parent.height-2)div 2
+		if $object.align&TOP
+		{
+			$y-($object.parent.height-2)div 2
+		}
+		if $object.align&BOTTOM
+		{
+			$y+($object.parent.height-2)div 2
+		}
+	}
+	else
+	{
+		if $object.align&TOP
+		{
+			$y-WINDOW_YSIZE div 2
+		}
+		if $object.align&BOTTOM
+		{
+			$y+WINDOW_YSIZE div 2
+		}
+	}}
 	ret($y)
+}
+fn get_window_event($window)
+{
+	$x=get_global_x($window)
+	$y=get_global_y($window)
+	$safe_area_border=10
+	if $window.flags&WINDOW_FLAG_DRAGGABLE
+	{
+		if EVT[EVT_KEY]==KEY_MOUSE_LEFT
+		{
+			if EVT[EVT_TYPE]==EVT_MOUSEBUTTONDOWN
+			{
+				if $window.flags&WINDOW_FLAG_RESIZEABLE
+				{
+
+				}
+				else{if EVT[EVT_X]>=$x&&EVT[EVT_X]<$x+$window.width&&EVT[EVT_Y]>=$y-61&&EVT[EVT_Y]<$y
+				{
+					$window.drag=1
+					$window.drag_x=EVT[EVT_X]
+					$window.drag_y=EVT[EVT_Y]
+				}}
+			}
+			else{if EVT[EVT_TYPE]==EVT_MOUSEBUTTONUP
+			{
+				$window.drag=0
+			}}
+		}
+		if EVT[EVT_TYPE]==EVT_MOUSEMOVE&&$window.drag
+		{
+			if $window.flags&WINDOW_FLAG_RESIZEABLE
+			{
+
+			}
+			else
+			{
+				$window.x+EVT[EVT_X]-$window.drag_x
+				$window.y+EVT[EVT_Y]-$window.drag_y
+				$window.drag_x=EVT[EVT_X]
+				$window.drag_y=EVT[EVT_Y]
+			}
+		}
+	}
+	$a=0 while $a!=get_size($window.buttons)
+	{
+		$result=get_button_event($window.buttons[$a])
+		if $window.type==WINDOW_ALERT||$window.type==WINDOW_DIALOGUE&&$result
+		{
+			remove_window($window)
+			ret($result&0x7FFFFFFF)
+		}
+		$a+1
+	}
 }
 fn get_button_event($button)
 {
@@ -405,11 +386,7 @@ fn get_button_event($button)
 		{
 			if EVT[EVT_TYPE]==EVT_BUTTONDOWN
 			{
-				$button.pressed=2
-				if !$button.entered
-				{
-					$button.entered=2
-				}
+				$button.pressed=1
 				if $button.main_event==EVT_BUTTONDOWN
 				{
 					$do_it=1
@@ -422,10 +399,6 @@ fn get_button_event($button)
 				{
 					$do_it=1
 				}
-				else{if $button.entered==2
-				{
-					$button.entered=0
-				}}
 			}
 		}
 		if EVT[EVT_X]>=$x&&EVT[EVT_X]<$x+$button.width&&EVT[EVT_Y]>=$y&&EVT[EVT_Y]<$y+$button.height
@@ -451,33 +424,23 @@ fn get_button_event($button)
 						{
 							$do_it=1
 						}
-						else{if MOBILE
-						{
-							$button.entered=0
-						}}
 					}
-					else{if MOBILE
+					if MOBILE
 					{
 						$button.entered=0
-					}}
+					}
 				}
 			}
 			if EVT[EVT_TYPE]==EVT_MOUSEMOVE||EVT[EVT_TYPE]==EVT_TOUCHMOVE
 			{
+				$button.scancode=EVT[EVT_SCANCODE]
 				$button.entered=1
 			}
 		}
-		else{if EVT[EVT_TYPE]==EVT_TOUCHMOVE||EVT[EVT_TYPE]==EVT_MOUSEMOVE
+		else{if EVT[EVT_TYPE]==EVT_MOUSEMOVE||EVT[EVT_TYPE]==EVT_TOUCHMOVE&&EVT[EVT_SCANCODE]==$button.scancode
 		{
-			if $button.pressed==2
-			{
-				$button.entered=2
-			}
-			else
-			{
-				$button.entered=0
-				$button.pressed=0
-			}
+			$button.entered=0
+			$button.pressed=0
 		}}
 		if $do_it
 		{
@@ -485,15 +448,12 @@ fn get_button_event($button)
 			{
 				$button.switch_state^1
 			}
-			$button.function($button, $button.arguments)
+			$result=$button.function($button, $button.arguments)
 			if $button.type==BUTTON_SELECT
 			{
 				$button.selected=1
 			}
-			if MOBILE&&$button.entered==1&&EVT[EVT_TYPE]!=EVT_BUTTONUP||$button.entered==2&&$button.main_event==EVT_BUTTONUP
-			{
-				$button.entered=0
-			}
+			ret($result)
 		}
 	}
 }
@@ -507,14 +467,14 @@ fn draw_window($window)
 	$transp=get_transp()
 	if COLOR_THEME==THEME_DARK
 	{
-		fbox($x+1, $y+1, $window.width-2, 40, get_color(get_red($window.color)*$title_alpha div 255, get_green($window.color)*$title_alpha div 255, get_blue($window.color)*$title_alpha div 255))
+		fbox($x+1, $y-60, $window.width-2, 60, get_color(get_red($window.color)*$title_alpha div 255, get_green($window.color)*$title_alpha div 255, get_blue($window.color)*$title_alpha div 255))
 	}
 	else{if COLOR_THEME==THEME_LIGHT
 	{
-		fbox($x+1, $y+1, $window.width-2, 40, get_color($title_alpha+get_red($window.color)*$title_alpha div 256, $title_alpha+get_green($window.color)*$title_alpha div 256, $title_alpha+get_blue($window.color)*$title_alpha div 256))
+		fbox($x+1, $y-60, $window.width-2, 60, get_color($title_alpha+get_red($window.color)*$title_alpha div 256, $title_alpha+get_green($window.color)*$title_alpha div 256, $title_alpha+get_blue($window.color)*$title_alpha div 256))
 	}}
 	transp($transp*$body_alpha div 255)
-	fbox($x+1, $y+42, $window.width-2, $window.height-43, $window.color)
+	fbox($x+1, $y+1, $window.width-2, $window.height-2, $window.color)
 	transp($transp)
 	$a=0 while $a!=get_size($window.texts)
 	{
@@ -541,8 +501,8 @@ fn draw_window($window)
 		$a+1
 	}
 	transp($transp*$border_alpha div 255)
-	box($x, $y, $window.width-1, $window.height-1, $window.color)
-	line($x, $y+41, $x+$window.width-1, $y+41, $window.color)
+	box($x, $y-61, $window.width-1, $window.height+60, $window.color)
+	line($x, $y, $x+$window.width-1, $y, $window.color)
 	transp($transp)
 }
 fn draw_text($text)
@@ -566,7 +526,7 @@ fn draw_button($button)
 		{
 			$normal=1
 		}
-		if $button.type==BUTTON_SWITCH
+		else{if $button.type==BUTTON_SWITCH
 		{
 			if $button.switch_state
 			{
@@ -589,7 +549,7 @@ fn draw_button($button)
 				$normal=1
 			}
 		}
-		if $button.type==BUTTON_SELECT
+		else{if $button.type==BUTTON_SELECT
 		{
 			if $button.selected||$button.pressed
 			{
@@ -607,7 +567,7 @@ fn draw_button($button)
 					$body_alpha=0
 				}
 			}
-		}
+		}}}
 		if $normal
 		{
 			if $button.pressed

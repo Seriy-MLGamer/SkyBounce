@@ -1,0 +1,204 @@
+fn new_particle($x, $y, $type, $pattern)
+{
+	particles[0, particles_index]=$type
+	particles[8, particles_index]=physic_frames
+	if $type==2
+	{
+		particles[3, particles_index]=rand()/32768*360
+		particles[7, particles_index]=crossfade(rand(), -4, 4, 0, 32768, CURVE_LINEAR)*360
+		if $pattern==0
+		{
+			particles[1, particles_index]=$x+crossfade(rand(), -.1, .1, 0, 32768, CURVE_LINEAR)
+			particles[2, particles_index]=$y+crossfade(rand(), -.1, .1, 0, 32768, CURVE_LINEAR)
+			particles[4, particles_index]=crossfade(rand(), 1, 1.5, 0, 32768, CURVE_LINEAR)*ball_size/M_SQRT2
+			particles[5, particles_index]=x_speed*.4+crossfade(rand(), -20, 20, 0, 32768, CURVE_LINEAR)
+			particles[6, particles_index]=y_speed*.4+crossfade(rand(), -20, 20, 0, 32768, CURVE_LINEAR)
+			particles[9, particles_index]=floor(crossfade(rand(), .035, .045, 0, 32768, CURVE_LINEAR)*physics_update_frequency)
+		}
+		else
+		{
+			particles[9, particles_index]=floor(crossfade(rand(), .2, .3, 0, 32768, CURVE_LINEAR)*physics_update_frequency)
+			if $pattern==1
+			{
+				particles[1, particles_index]=$x//crossfade(rand(), $x-.05, $x+.05, 0, 32768, CURVE_LINEAR)
+				particles[2, particles_index]=$y//crossfade(rand(), $y-.05, $y+.05, 0, 32768, CURVE_LINEAR)
+				particles[4, particles_index]=crossfade(rand(), .4, .6, 0, 32768, CURVE_LINEAR)*ball_size/M_SQRT2
+				particles[5, particles_index]=crossfade(rand(), -10, 10, 0, 32768, CURVE_LINEAR)
+				particles[6, particles_index]=crossfade(rand(), -1, 1, 0, 32768, CURVE_LINEAR)
+			}
+			else
+			{
+				particles[1, particles_index]=$x+crossfade(rand(), -.1, .1, 0, 32768, CURVE_LINEAR)
+				particles[2, particles_index]=$y+crossfade(rand(), -.1, .1, 0, 32768, CURVE_LINEAR)
+				particles[4, particles_index]=crossfade(rand(), .8, 1.2, 0, 32768, CURVE_LINEAR)*ball_size/M_SQRT2
+				$speed=crossfade(rand(), 8, 12, 0, 32768, CURVE_LINEAR)
+				$angle=rand()/16384*M_PI
+				particles[5, particles_index]=cos($angle)*$speed
+				particles[6, particles_index]=sin($angle)*$speed
+			}
+		}
+	}
+	else
+	{
+		particles[1, particles_index]=$x
+		particles[2, particles_index]=$y
+		if $type==1
+		{
+			particles[3, particles_index]=rand()/32768*360
+			if sqrt(x_speed*x_speed+y_speed*y_speed)>=200
+			{
+			particles[5, particles_index]=x_speed*.2+crossfade(rand(), -50, 50, 0, 32768, CURVE_LINEAR)*crossfade(sqrt(x_speed*x_speed+y_speed*y_speed), 0, 1, 200, 100, CURVE_LINEAR)
+			particles[6, particles_index]=y_speed*.2+crossfade(rand(), -20, 20, 0, 32768, CURVE_LINEAR)*crossfade(sqrt(x_speed*x_speed+y_speed*y_speed), 0, 1, 200, 100, CURVE_LINEAR)
+			}
+			else
+			{
+				particles[5, particles_index]=x_speed*.2
+				particles[6, particles_index]=y_speed*.2
+			}
+			particles[7, particles_index]=crossfade(rand(), -4, 4, 0, 32768, CURVE_LINEAR)*360
+			particles[9, particles_index]=floor(.02*physics_update_frequency)
+		}
+		else
+		{
+			particles[4, particles_index]=crossfade(rand(), .2, .4, 0, 32768, CURVE_LINEAR)
+			particles[5, particles_index]=crossfade(rand(), -.5, .5, 0, 32768, CURVE_LINEAR)
+			particles[6, particles_index]=crossfade(rand(), -.5, .5, 0, 32768, CURVE_LINEAR)
+			particles[9, particles_index]=floor(crossfade(rand(), 4, 8, 0, 32768, CURVE_LINEAR)*physics_update_frequency)
+		}
+	}
+	particles_index+1
+	particles_index%get_ysize(particles)
+}
+fn process_particle($index)
+{
+	if physic_frames<particles[8, $index]+particles[9, $index]
+	{
+		particles[10, $index]=(particles[1, $index]+crossfade(physic_frames, 0, particles[5, $index], particles[8, $index], physics_update_frequency, CURVE_LINEAR)-camera_x)*meter_size*camera_scale
+		particles[11, $index]=(particles[2, $index]+crossfade(physic_frames, 0, particles[6, $index], particles[8, $index], physics_update_frequency, CURVE_LINEAR)-camera_y)*meter_size*camera_scale
+		if particles[0, $index]==0
+		{
+			particles[13, $index]=meter_size*particles[4, $index]*camera_scale/32
+			particles[17, $index]=crossfade(physic_frames, 256, 0, particles[8, $index], particles[9, $index], CURVE_SLOW)
+		}
+		else
+		{
+			particles[12, $index]=particles[3, $index]+crossfade(physic_frames, 0, particles[7, $index], particles[8, $index], physics_update_frequency, CURVE_LINEAR)
+			if particles[0, $index]==1
+			{
+				particles[13, $index]=ball_size*meter_size*camera_scale*crossfade(physic_frames, 1, 4, particles[8, $index], particles[9, $index], CURVE_LINEAR)/M_SQRT2
+				$fade=crossfade(sqrt(x_speed*x_speed+y_speed*y_speed), 256, 0, 200, 100, CURVE_FAST)
+				if y>=0
+				{
+					$height=256
+				}
+				else
+				{
+					$height=crossfade(y, 0, 256, -atmosphere_height, atmosphere_height, CURVE_FAST)
+				}
+				particles[14, $index]=255
+				particles[15, $index]=128+$fade/2
+				particles[16, $index]=$fade
+				particles[17, $index]=crossfade(physic_frames, $height, 0, particles[8, $index], particles[9, $index], CURVE_LINEAR)
+			}
+			else{if particles[0, $index]==2
+			{
+				particles[13, $index]=meter_size*particles[4, $index]*camera_scale
+				$fade=crossfade(physic_frames, 768, 0, particles[8, $index], particles[9, $index], CURVE_LINEAR)
+				particles[14, $index]=255
+				particles[15, $index]=$fade-256
+				particles[16, $index]=$fade-512
+				particles[17, $index]=$fade
+			}}
+		}
+	}
+}
+fn thread_function($unused, $thread)
+{
+	while running_function>=0
+	{
+		if !(done&(1<<$thread))
+		{
+			if running_function==1
+			{
+				$a=$thread while $a<get_size(particles)
+				{
+					process_particle($a)
+					$a+THREADS
+				}
+			}
+			done|(1<<$thread)
+		}
+		else
+		{
+			sleep(4)
+		}
+	}
+}
+fn draw_particles($types)
+{
+	$a=0 while $a!=get_ysize(particles)
+	{
+		if physic_frames<particles[8, $a]+particles[9, $a]
+		{
+			if $types==0||$types&0b001&&particles[0, $a]==0
+			{
+				$transp=get_transp()
+				transp(particles[17, $a])
+				pixi(texture_halo, particles[10, $a], particles[11, $a], SNEG, particles[13, $a], particles[13, $a])
+				//fbox(particles[10, $a], particles[11, $a], particles[13, $a]*32, particles[13, $a]*32, SNEG)
+				transp($transp)
+			}
+			else{if $types==0||$types&0b110&&(particles[0, $a]==1||particles[0, $a]==2)
+			{
+				t_translate(particles[10, $a], particles[11, $a], 0)
+				t_rotate(particles[12, $a], 0, 0, 1)
+				$transp=get_transp()
+				transp(particles[17, $a])
+				fbox(-particles[13, $a]/2, -particles[13, $a]/2, particles[13, $a], particles[13, $a], get_color(particles[14, $a], particles[15, $a], particles[16, $a]))
+				t_reset()
+				transp($transp)
+			}}
+		}
+		$a+1
+	}
+}
+fn atmosphere()
+{
+	$vertices=new(2, 16, FLOAT32)
+	$colors=new(4, 16, INT8)
+	clean($colors)
+	$a=0 while $a!=7
+	{
+		$vertices[0, $a*2]=-WINDOW_XSIZE div 2
+		$vertices[0, $a*2+1]=WINDOW_XSIZE div 2-1
+		$vertices[1, $a*2]=(crossfade($a, -atmosphere_height, atmosphere_height, 0, 6, CURVE_LINEAR)-camera_y)*meter_size*camera_scale
+		$vertices[1, $a*2+1]=$vertices[1, $a*2]
+		$a+1
+	}
+	$vertices[0, 14]=-WINDOW_XSIZE div 2
+	$vertices[0, 15]=WINDOW_XSIZE div 2-1
+	$vertices[1, 14]=WINDOW_YSIZE div 2-1
+	$vertices[1, 15]=$vertices[1, 14]
+	op_cn(OP_COPY, $colors, 255, 3, 2, 1, 14)
+	op_cn(OP_COPY, $colors, 255, 2, 0, 1, 8)
+	op_cn(OP_COPY, $colors, 255, 1, 4, 1, 6)
+	op_cn(OP_COPY, $colors, 255, 0, 6, 1, 6)
+	$colors[1, 4]=192
+	$colors[1, 5]=192
+	$colors[1, 8]=192
+	$colors[1, 9]=192
+	gl_draw_arrays(GL_TRIANGLE_STRIP, 0, 16, 255, 255, 255, 255, -1, $vertices, $colors)
+	remove($vertices)
+	remove($colors)
+}
+fn draw_ball($red, $green, $blue, $alpha)
+{
+	$vertices=new(2, 32, INT16)
+	//pixi(halo, (x-camera_x)*meter_size*camera_scale, (y-camera_y)*meter_size*camera_scale, get_color($red, $green, $blue), ball_size*meter_size*camera_scale*4/64, ball_size*meter_size*camera_scale*4/64)
+	generator(OP_SIN, $vertices, 0, ball_size/2*meter_size*camera_scale, 0, M_PI/16, 0, 0, 1, 32)
+	op_cn(OP_ADD, $vertices, (x-camera_x)*meter_size*camera_scale, 0, 0, 1, 32)
+	generator(OP_SIN, $vertices, M_PI/2, ball_size/2*meter_size*camera_scale, 0, M_PI/16, 1, 0, 1, 32)
+	op_cn(OP_ADD, $vertices, (y-camera_y)*meter_size*camera_scale, 1, 0, 1, 32)
+	gl_draw_arrays(GL_TRIANGLE_FAN, 0, 32, $red, $green, $blue, $alpha, -1, $vertices)
+	remove($vertices)
+}
