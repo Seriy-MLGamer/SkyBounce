@@ -1,0 +1,29 @@
+include "include/mlg user interface.pixih"
+include "include/mlg easy programming.pixih"
+
+COLOR_THEME=THEME_DARK
+win=new_window("Important!", -400, -200, 800, 400, WINDOW_DIALOGUE, WINDOW_FLAG_DRAGGABLE)
+text=new_text("U SUS!!!", 10, 10, win.width-22, 4)
+text.align=TOP|LEFT
+text.text_align=TOP|LEFT
+bind_text(text, win)
+while 1
+{
+	clear()
+	if win.window
+	{
+		draw_window(win)
+	}
+	frame()
+	while get_event()
+	{
+		if win.window
+		{
+			get_window_event(win)
+		}
+		if EVT[EVT_TYPE]==EVT_QUIT
+		{
+			halt
+		}
+	}
+}
