@@ -1,5 +1,3 @@
-REMOVE_THIS=1
-
 include "include/MLG user interface.pixih"
 include "include/MLG easy programming.pixih"
 include "include/Game functions.pixih"
@@ -29,27 +27,27 @@ clean(texture_stars)
 texture_halo=load("share/halo.png")
 set_flags(texture_halo, GL_MIN_LINEAR|GL_MAG_LINEAR|GL_NICEST)
 
-/**Particles structure.
- * @param 0 type of particle.
- * @param 1 x.
- * @param 2 y.
- * @param 3 rotation.
- * @param 4 size.
- * @param 5 x speed.
- * @param 6 y speed.
- * @param 7 rotation speed.
- * @param 8 timestamp in physic frames.
- * @param 9 time of life in physic frames.
- * @param 10 x, calculated for rendering.
- * @param 11 y, calculated for rendering.
- * @param 12 rotation, calculated for rendering.
- * @param 13 size, calculated for rendering.
- * @param 14 calculated red color.
- * @param 15 calculated green color.
- * @param 16 calculated blue color.
- * @param 17 calculated alpha.
+/**
+ * \brief Particles structure.
+ * \param 0 type of particle.
+ * \param 1 x.
+ * \param 2 y.
+ * \param 3 rotation.
+ * \param 4 size.
+ * \param 5 x speed.
+ * \param 6 y speed.
+ * \param 7 rotation speed.
+ * \param 8 timestamp in physic frames.
+ * \param 9 time of life in physic frames.
+ * \param 10 is drawable.
+ * \param 11 x calculated for rendering.
+ * \param 12 y calculated for rendering.
+ * \param 13 rotation, calculated for rendering.
+ * \param 14 size, calculated for rendering.
+ * \param 15 calculated color.
+ * \param 16 calculated transparency.
  */
-particles=new(18, 1024, FLOAT)
+particles=new(17, 1024, FLOAT)
 clean(particles)
 particles_index=0
 first_time=1
@@ -222,10 +220,8 @@ fn gl_callback()
 			b=crossfade(time, .5, 1, 0, 1000, CURVE_FAST)
 			interface[2].y=-240/b
 			interface[2].size=8/b
-			transp(crossfade(time, 0, 256, 0, 1000, CURVE_LINEAR))
-			draw_text(interface[2])
-			t_reset()
-			transp(255) 
+			interface[2].transp=crossfade(time, 0, 256, 0, 1000, CURVE_LINEAR)
+			draw_GUI(GUI)
 		}
 		else{if time<2000
 		{
@@ -240,27 +236,28 @@ fn gl_callback()
 				first_time=0
 			}
 			a=crossfade(time, 1/8, 1, 1000, 1000, CURVE_FAST)
+			bind(interface[0], GUI)
 			interface[0].x=-200/a
 			interface[0].y=-100/a
 			interface[0].width=400/a
 			interface[0].height=200/a
 			interface[0].title.size=4/a
+			interface[0].transp=crossfade(time, 0, 256, 1000, 1000, CURVE_LINEAR)
+			bind(interface[1], GUI)
 			interface[1].x=-300/a
 			interface[1].y=150/a
 			interface[1].width=100/a
 			interface[1].height=100/a
 			interface[1].title.size=4/a
-			transp(255)
-			pixi(texture_stars, 0, 0)
+			interface[1].transp=interface[0].transp
 			interface[2].y=-240
 			interface[2].size=8
-			draw_text(interface[2])
+			interface[2].transp=255
+			bind(interface[3], GUI)
 			interface[3].x=crossfade(time, 300, -150, 1000, 1000, CURVE_FAST)
-			transp(crossfade(time, 0, 256, 1000, 1000, CURVE_SLOW))
-			draw_text(interface[3])
-			transp(crossfade(time, 0, 256, 1000, 500, CURVE_LINEAR))
-			draw_button(interface[0])
-			draw_button(interface[1])
+			interface[3].transp=crossfade(time, 0, 256, 1000, 1000, CURVE_SLOW)
+			pixi(texture_stars, 0, 0)
+			draw_GUI(GUI)
 		}
 		else
 		{
@@ -276,21 +273,20 @@ fn gl_callback()
 					interface[0].width=400
 					interface[0].height=200
 					interface[0].title.size=4
+					interface[0].transp=255
 					interface[1].x=-300
 					interface[1].y=150
 					interface[1].width=100
 					interface[1].height=100
 					interface[1].title.size=4
+					interface[1].transp=255
 					interface[3].x=-150
-					transp(255)
+					interface[3].transp=255
 					a=1
 				}
 				pixi(texture_stars, 0, 0)
 				draw_particles()
 				atmosphere()
-				draw_text(interface[2])
-				draw_text(interface[3])
-				draw_button(interface[0])
 				if interface[1].switch_state
 				{
 					interface[1].title.string="v"
@@ -301,11 +297,7 @@ fn gl_callback()
 					interface[1].title.string=-1
 					interface[1].color=RED
 				}
-				draw_button(interface[1])
-				if win.window
-				{
-					draw_window(win)
-				}
+				draw_GUI(GUI)
 			}
 			else{if time<timestamp
 			{
@@ -317,9 +309,6 @@ fn gl_callback()
 				atmosphere()
 				interface[2].y=-240-(camera_y-menu_camera_y)*meter_size*camera_scale
 				interface[3].y=200-(camera_y-menu_camera_y)*meter_size*camera_scale
-				draw_text(interface[2])
-				draw_text(interface[3])
-				draw_button(interface[0])
 				if interface[1].switch_state
 				{
 					interface[1].title.string="v"
@@ -330,7 +319,7 @@ fn gl_callback()
 					interface[1].title.string=-1
 					interface[1].color=RED
 				}
-				draw_button(interface[1])
+				draw_GUI(GUI)
 			}}
 			while physic_frames!=floor((time-2000)/1000*physics_update_frequency)
 			{
@@ -394,49 +383,30 @@ while 1
 	}
 	else
 	{
-		/**I don't want to flood the name space.
+		/**
+		 * I don't want to flood the name space.
 		 */
+		GUI=new_GUI()
 		interface=new(4, 1, INT)
 		interface[0]=new_button("Play", -200, -100, 400, 200, BUTTON_STANDARD)
+		interface[1]=new_button(-1, -300, 150, 100, 100, BUTTON_SWITCH)
+		interface[2]=new_text("SkyBounce", 0, -240, 0, 8)
+		interface[3]=new_text("No acceleration.", 0, 200, 0, 4)
 		interface[0].keyboard_key=KEY_ENTER
 		set_button_callback(interface[0], {scene_cross=1 timestamp=time+1000}, 0)
-		interface[1]=new_button(-1, -300, 150, 100, 100, BUTTON_SWITCH)
 		interface[1].color=RED
-		interface[2]=new_text("SkyBounce", 0, -240, 0, 8)
 		interface[2].color=GREEN
-		interface[3]=new_text("No acceleration.", 0, 200, 0, 4)
 		interface[3].text_align=LEFT
-		if REMOVE_THIS
-		{
-			win=new_window("Important!", -400, -200, 800, 400, WINDOW_ALERT, WINDOW_FLAG_DRAGGABLE)
-			text=new_text("U SUS!!!", 10, 10, win.width-22, 4)
-			text.align=TOP|LEFT
-			text.text_align=TOP|LEFT
-			bind_text(text, win)
-		}
+		bind(interface[2], GUI)
 		physic_frames=0
 		start_timer()
 		while 1
 		{
 			frame()
-			if time>=2000&&REMOVE_THIS&&win.window
-			{
-				interface[0].active=0
-				interface[1].active=0
-			}
-			else
-			{
-				interface[0].active=1
-				interface[1].active=1
-			}
 			while get_event()
 			{
 				if time>=2000&&!scene_cross
 				{
-					if REMOVE_THIS&&win.window
-					{
-						get_window_event(win)
-					}
 					get_button_event(interface[0])
 					get_button_event(interface[1])
 				}
@@ -453,10 +423,7 @@ while 1
 				break
 			}
 		}
-		remove_button(interface[0])
-		remove_button(interface[1])
-		remove_text(interface[2])
-		remove_text(interface[3])
+		remove_GUI(GUI)
 		remove(interface)
 	}
 }

@@ -1,29 +1,65 @@
 include "include/mlg user interface.pixih"
-include "include/mlg easy programming.pixih"
 
 COLOR_THEME=THEME_DARK
-win=new_window("Important!", -400, -200, 800, 400, WINDOW_DIALOGUE, WINDOW_FLAG_DRAGGABLE)
-text=new_text("U SUS!!!", 10, 10, win.width-22, 4)
+AMOGUS=load("share/7b8b9cbc22da0f51cc6710d470a70abd.png")
+GUI=new_GUI()
+win=new_window("Important!", -400, -300, 800, 600, WINDOW_DIALOG, WINDOW_FLAG_DRAGGABLE|WINDOW_FLAG_RESIZEABLE)
+text=new_text("U SUS!!!", WINDOW_SAFE_AREA, WINDOW_SAFE_AREA, win.width-2-2*WINDOW_SAFE_AREA, 4)
+amogus=new_image(AMOGUS, -200, -200, 400, 400)
+win.transp=255
+set_button_callback(win.buttons[0],
+{
+	win.type=WINDOW_STANDARD
+	win.buttons[0].active=0
+	win.buttons[1].active=0
+	h_ck_no=new_window("Are you sure?", -500, -200, 800, 200, WINDOW_DIALOG, WINDOW_FLAG_DRAGGABLE)
+	h_ck_no.color=RED
+	bind(h_ck_no, GUI)
+	set_button_callback(h_ck_no.buttons[0], {show_text="Wellcum! ;)"})
+	set_button_callback(h_ck_no.buttons[1], {win.type=WINDOW_DIALOG win.buttons[0].active=1 win.buttons[1].active=1})
+})
+set_button_callback(win.buttons[1], {show_text="MAZAFAKAAA!!!!!!"})
 text.align=TOP|LEFT
 text.text_align=TOP|LEFT
-bind_text(text, win)
+bind(win, GUI)
+bind(text, win)
+bind(amogus, win)
+GUI.windows[2].color=RED
 while 1
 {
-	clear()
-	if win.window
-	{
-		draw_window(win)
-	}
-	frame()
 	while get_event()
+	{
+		get_GUI_event(GUI)
+		if EVT[EVT_TYPE]==EVT_BUTTONDOWN&&EVT[EVT_KEY]==KEY_DELETE
+		{
+			remove_button(GUI.windows[0].buttons[0])
+		}
+		else{if EVT[EVT_TYPE]==EVT_MOUSEBUTTONDOWN||EVT[EVT_TYPE]==EVT_MOUSEBUTTONUP
+		{
+			sprintf(text.string, "%d", win.drag)
+		}
+		else{if EVT[EVT_TYPE]==EVT_QUIT
+		{
+			halt
+		}}}
+	}
+	if COLOR_THEME==THEME_LIGHT
+	{
+		clear(SNEG)
+	}
+	else{if COLOR_THEME==THEME_DARK
+	{
+		clear()
+	}}
+	draw_GUI(GUI)
+	if show_text
 	{
 		if win.window
 		{
-			get_window_event(win)
+			remove_window(win, WINDOW_FLAG_REMOVE_ELEMENTS|WINDOW_FLAG_INHERIT_REMOVES)
 		}
-		if EVT[EVT_TYPE]==EVT_QUIT
-		{
-			halt
-		}
+		pixi(AMOGUS, 0, 0)
+		print(show_text)
 	}
+	frame()
 }

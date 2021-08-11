@@ -4,17 +4,106 @@
 
 
 THEME_LIGHT=0
-THEME_DARK=1
-COLOR_THEME=THEME_DARK
-BUTTON_STANDARD=0
-BUTTON_SWITCH=1
-BUTTON_SELECT=2
-WINDOW_STANDARD=0
-WINDOW_DIALOGUE=1
-WINDOW_ALERT=2
-WINDOW_FLAG_DRAGGABLE=0b1
-WINDOW_FLAG_RESIZEABLE=0b10
+THEME_DARK= 1
 
+WINDOW_STANDARD=0
+WINDOW_DIALOG=  1
+WINDOW_ALERT=   2
+BUTTON_STANDARD=0
+BUTTON_SWITCH=  1
+BUTTON_SELECT=  2
+
+GUI_FLAG_REMOVE_ELEMENTS= 0b1
+GUI_FLAG_INHERIT_REMOVES=0b10
+WINDOW_FLAG_DRAGGABLE=  0b1
+WINDOW_FLAG_RESIZEABLE=0b10
+WINDOW_FLAG_REMOVE_ELEMENTS= 0b1
+WINDOW_FLAG_INHERIT_REMOVES=0b10
+IMAGE_FLAG_REMOVE_SOURCE=0b1
+
+MOBILE=1
+COLOR_THEME=THEME_DARK
+WINDOW_SAFE_AREA=20
+
+/**
+ * \brief Creates a GUI container. It's useful for safe drawing and handling events of GUI elements with one call or storing GUI patterns.
+ * \return A GUI container.
+ * \see draw_GUI()
+ * \see get_GUI_event()
+ * \see remove_GUI()
+ */
+fn new_GUI()
+{
+	$gui=new()
+	$gui.gui=1
+
+	$gui.texts=new(1, 1, INT)
+	clean($gui.texts, -1)
+	$gui.images=new(1, 1, INT)
+	clean($gui.images, -1)
+	$gui.buttons=new(1, 1, INT)
+	clean($gui.buttons, -1)
+	$gui.windows=new(1, 1, INT)
+	clean($gui.windows, -1)
+	$gui.window_focus=0
+	ret($gui)
+}
+/**
+ * \brief Removes a GUI container.
+ * \param gui a GUI container.
+ * \param flags flags for remove.
+ * \see new_GUI()
+ */
+fn remove_GUI($gui, $flags)
+{
+	if $gui>=0
+	{
+		if $flags&GUI_FLAG_REMOVE_ELEMENTS
+		{
+			$a=0 while $a<get_size($gui.windows)
+			{
+				remove_window($gui.windows[$a], !!($flags&GUI_FLAG_INHERIT_REMOVES)*(WINDOW_FLAG_REMOVE_ELEMENTS|WINDOW_FLAG_INHERIT_REMOVES))
+				$a+1
+			}
+			$a=0 while $a<get_size($gui.texts)
+			{
+				remove_text($gui.texts[$a])
+				$a+1
+			}
+			$a=0 while $a<get_size($gui.images)
+			{
+				remove_image($gui.images[$a], !!($flags&GUI_FLAG_INHERIT_REMOVES)*IMAGE_FLAG_REMOVE_SOURCE)
+				$a+1
+			}
+			$a=0 while $a<get_size($gui.buttons)
+			{
+				remove_button($gui.buttons[$a])
+				$a+1
+			}
+		}
+		remove($gui.windows)
+		remove($gui.texts)
+		remove($gui.images)
+		remove($gui.buttons)
+		remove($gui)
+	}
+}
+/**
+ * \brief Creates a window GUI element. GUI elements bound to the window inherit its position.
+ * \param title a text on the top of the window.
+ * \param x
+ * \param y
+ * \param width
+ * \param height
+ * \param type a preset of the window.
+ * \param flags flags of the window (how it should work and/or appear).
+ * \return A container with window properties.
+ * \see bind()
+ * \see unbind()
+ * \see draw_window()
+ * \see get_window_event()
+ * \see remove_window()
+ */
 fn new_window($title, $x, $y, $width, $height, $type, $flags)
 {
 	$window=new()
@@ -27,8 +116,10 @@ fn new_window($title, $x, $y, $width, $height, $type, $flags)
 	$window.type=$type
 	$window.flags=$flags
 
+	$window.parent=-1
 	$window.align=0
-	$window.color=#80FFFF
+	$window.color=#00FFFF
+	$window.transp=255
 	$window.drag=0
 	$window.drag_x=0
 	$window.drag_y=0
@@ -41,39 +132,44 @@ fn new_window($title, $x, $y, $width, $height, $type, $flags)
 	clean($window.images, -1)
 	$window.buttons=new(1, 1, INT)
 	clean($window.buttons, -1)
-	if $type==WINDOW_DIALOGUE
+	if $type==WINDOW_DIALOG
 	{
-		$ok=new_button("OK", -210, -110, 200, 100, BUTTON_STANDARD)
+		$ok=new_button("OK", -200-WINDOW_SAFE_AREA, -100-WINDOW_SAFE_AREA, 200, 100, BUTTON_STANDARD)
 		if 0//strstr(LANG_NAME, "ru_")==0
 		{
-			$cancel=new_button("Отмена", -420, -110, 200, 100, BUTTON_STANDARD)
+			$cancel=new_button("Отмена", -400-WINDOW_SAFE_AREA*2, -100-WINDOW_SAFE_AREA, 200, 100, BUTTON_STANDARD)
 		}
 		else
 		{
-			$cancel=new_button("Cancel", -420, -110, 200, 100, BUTTON_STANDARD)
+			$cancel=new_button("Cancel", -400-WINDOW_SAFE_AREA*2, -100-WINDOW_SAFE_AREA, 200, 100, BUTTON_STANDARD)
 		}
 		$ok.align=RIGHT|BOTTOM
 		$cancel.align=RIGHT|BOTTOM
-		set_button_callback($ok, {ret(0x80000001)}, 0)
-		set_button_callback($cancel, {ret(0x80000000)}, 0)
-		bind_button($ok, $window)
-		bind_button($cancel, $window)
+		bind($ok, $window)
+		bind($cancel, $window)
 	}
 	else{if $type==WINDOW_ALERT
 	{
-		$ok=new_button("OK", -210, -110, 200, 100, BUTTON_STANDARD)
+		$ok=new_button("OK", -200-WINDOW_SAFE_AREA, -100-WINDOW_SAFE_AREA, 200, 100, BUTTON_STANDARD)
 		$ok.align=RIGHT|BOTTOM
-		bind_button($ok, $window)
-		set_button_callback($ok, {ret(1)}, 0)
+		bind($ok, $window)
 	}}
 	ret($window)
 }
-fn remove_window($window)
+/**
+ * \brief Removes a window.
+ * \param window
+ * \param flags flags for remove.
+ * \see unbind()
+ * \see new_window()
+ */
+fn remove_window($window, $flags)
 {
+	unbind($window)
 	if $window>=0
 	{
 		remove_text($window.texts[0])
-		if $window.type==WINDOW_DIALOGUE
+		if $window.type==WINDOW_DIALOG
 		{
 			remove_button($window.buttons[0])
 			remove_button($window.buttons[1])
@@ -82,12 +178,43 @@ fn remove_window($window)
 		{
 			remove_button($window.buttons[0])
 		}}
+		if $flags&WINDOW_FLAG_REMOVE_ELEMENTS
+		{
+			$a=1 while $a<get_size($window.texts)
+			{
+				remove_text($window.texts[$a])
+				$a+1
+			}
+			$a=0 while $a<get_size($window.images)
+			{
+				remove_image($window.images[$a], !!($flags&WINDOW_FLAG_INHERIT_REMOVES)*IMAGE_FLAG_REMOVE_SOURCE)
+				$a+1
+			}
+			$a=0 while $a<get_size($window.buttons)
+			{
+				remove_button($window.buttons[$a])
+				$a+1
+			}
+		}
 		remove($window.texts)
 		remove($window.images)
 		remove($window.buttons)
 		remove($window)
 	}
 }
+/**
+ * \brief Creates a text GUI element. In the difference of the default string, this element has size and inheritance of parent elements.
+ * \param string a string contained by the element.
+ * \param x
+ * \param y
+ * \param width a width of word wrap. 0 disables word wrap.
+ * \param size a scale of font.
+ * \return A container with text properties.
+ * \see bind()
+ * \see unbind()
+ * \see draw_text()
+ * \see remove_text()
+ */
 fn new_text($string, $x, $y, $width, $size)
 {
 	$text=new()
@@ -99,6 +226,7 @@ fn new_text($string, $x, $y, $width, $size)
 	$text.width=$width
 	$text.size=$size
 
+	$text.parent=-1
 	$text.align=0
 	$text.text_align=0
 	if COLOR_THEME==THEME_DARK
@@ -109,20 +237,88 @@ fn new_text($string, $x, $y, $width, $size)
 	{
 		$text.color=#000000
 	}}
-	$text.parent=-1
+	$text.transp=255
 	ret($text)
 }
+/**
+ * \brief Removes a text.
+ * \param text
+ * \see unbind()
+ * \see new_text()
+ */
 fn remove_text($text)
 {
+	unbind($text)
 	if $text>=0
 	{
-		if $text.parent>=0
-		{
-			unbind_text($text, $text.parent)
-		}
 		remove($text)
 	}
 }
+/**
+ * \brief Creates an image GUI element. This element can display pixel containers and inherits parent's position.
+ * \param source a pixel container.
+ * \param x
+ * \param y
+ * \param width
+ * \param height
+ * \return A container with image properties.
+ * \see bind()
+ * \see unbind()
+ * \see draw_image()
+ * \see remove_image()
+ */
+fn new_image($source, $x, $y, $width, $height)
+{
+	$image=new()
+	$image.image=1
+
+	$image.source=$source
+	$image.x=$x
+	$image.y=$y
+	$image.width=$width
+	$image.height=$height
+
+	$image.parent=-1
+	$image.align=0
+	$image.color=WHITE
+	$image.transp=255
+	ret($image)
+}
+/**
+ * \brief Removes an image.
+ * \param image
+ * \param flags flags for remove.
+ * \see unbind()
+ * \see new_image()
+ */
+fn remove_image($image, $flags)
+{
+	unbind($image)
+	if $image>=0
+	{
+		if $flags&IMAGE_FLAG_REMOVE_SOURCE
+		{
+			remove($image.source)
+		}
+		remove($image)
+	}
+}
+/**
+ * \brief Creates a button GUI element. You can press this button! And, of course, it inherits parent's position.
+ * \param title a text on the button.
+ * \param x
+ * \param y
+ * \param width
+ * \param height
+ * \param type a type of the button (how it should work).
+ * \return A container with button properties.
+ * \see bind()
+ * \see unbind()
+ * \see draw_button()
+ * \see get_button_event()
+ * \see set_button_callback()
+ * \see remove_button()
+ */
 fn new_button($title, $x, $y, $width, $height, $type)
 {
 	$button=new()
@@ -134,11 +330,12 @@ fn new_button($title, $x, $y, $width, $height, $type)
 	$button.y=$y
 	$button.width=$width
 	$button.height=$height
-
-	$button.align=0
-	$button.parent=-1
 	$button.type=$type
+
+	$button.parent=-1
+	$button.align=0
 	$button.color=#00FFFF
+	$button.transp=255
 	$button.active=1
 	$button.entered=0
 	$button.pressed=0
@@ -160,80 +357,120 @@ fn new_button($title, $x, $y, $width, $height, $type)
 	$button.arguments=0
 	ret($button)
 }
+/**
+ * \brief Removes a button.
+ * \param button
+ * \see unbind()
+ * \see new_button()
+ */
 fn remove_button($button)
 {
+	unbind($button)
 	if $button>=0
 	{
 		remove($button.title)
-		if $button.window>=0
-		{
-			unbind_button($button, $button.window)
-		}
 		remove($button)
 	}
 }
-fn bind_text($text, $window)
+/**
+ * \brief Binds a GUI element to the window or GUI container.
+ * \param object a GUI element.
+ * \param parent a window or GUI container.
+ * \see unbind()
+ */
+fn bind($object, $parent)
 {
-	if $window>=0&&$text>=0
+	if $object>=0&&$object.parent<0&&$parent>=0
 	{
-		$text.parent=$window
-		$a=0 while $a!=get_size($window.texts)&&$window.texts[$a]>=0
+		$object.parent=$parent
+		if $object.window
+		{
+			$array=$parent.windows
+		}
+		else{if $object.text
+		{
+			$array=$parent.texts
+		}
+		else{if $object.image
+		{
+			$array=$parent.images
+		}
+		else{if $object.button
+		{
+			$array=$parent.buttons
+		}}}}
+		$a=0 while $array[$a]>=0&&$a!=get_size($array)
 		{
 			$a+1
 		}
-		if $a==get_size($window.texts)
+		if $a==get_size($array)
 		{
-			resize($window.texts, get_size($window.texts)+1)
+			resize($array, get_size($array)+1)
 		}
-		$window.texts[$a]=$text
+		$array[$a]=$object
 	}
 }
-fn unbind_text($text, $window)
+/**
+ * \brief Unbinds a GUI element from its parent.
+ * \param object a GUI element.
+ * \see bind()
+ */
+fn unbind($object)
 {
-	if $window>=0&&$text>=0&&$window.window
+	if $object>=0&&$object.parent>=0
 	{
-		$a=0 while $a!=get_size($window.texts)&&$window.texts[$a]==$text
+		if $object.window
+		{
+			$array=$object.parent.windows
+		}
+		else{if $object.text
+		{
+			$array=$object.parent.texts
+		}
+		else{if $object.image
+		{
+			$array=$object.parent.images
+		}
+		else{if $object.button
+		{
+			$array=$object.parent.buttons
+		}}}}
+		$a=0 while $array[$a]!=$object&&$a!=get_size($array)
 		{
 			$a+1
 		}
-		if $a!=get_size($window.texts)
+		if $a!=get_size($array)
 		{
-			$window.texts[$a]=-1
+			$array[$a]=-1
+			if $a==get_size($array)-1
+			{
+				while $array[$a]<0
+				{
+					$a-1
+				}
+				if $a>=0
+				{
+					resize($array, $a+1)
+				}
+				else
+				{
+					resize($array, 1)
+				}
+			}
 		}
-		$text.parent=-1
+		$object.parent=-1
 	}
 }
-fn bind_button($button, $window)
-{
-	if $window>=0&&$button>=0
-	{
-		$button.parent=$window
-		$a=0 while $a!=get_size($window.buttons)&&$window.buttons[$a]>=0
-		{
-			$a+1
-		}
-		if $a==get_size($window.buttons)
-		{
-			resize($window.buttons, get_size($window.buttons)+1)
-		}
-		$window.buttons[$a]=$button
-	}
-}
-fn unbind_button($button, $window)
-{
-	if $window>=0&&$button>=0
-	{
-		$a=0 while $a!=get_size($window.buttons)&&$window.buttons[$a]==$button
-		{
-			$a+1
-		}
-		if $a!=get_size($window.buttons)
-		{
-			$window.buttons[$a]=-1
-		}
-		$button.parent=-1
-	}
-}
+/**
+ * \brief Binds a function to the button. Then this button can execute it by the press.
+ * \param button
+ * \param function put here a name of the function. 0 unbinds a function.
+ * \param arguments some user-defined data for the function.
+ * \see bind()
+ * \see unbind()
+ * \see get_button_event()
+ * \see new_button()
+ */
 fn set_button_callback($button, $function, $arguments)
 {
 	if $button>=0
@@ -242,6 +479,14 @@ fn set_button_callback($button, $function, $arguments)
 		$button.arguments=$arguments
 	}
 }
+/**
+ * \brief Returns an inherited x coordinate of the GUI element - its screen coordinate.
+ * \param object a GUI element.
+ * \return An inherited x coordinate.
+ * \see bind()
+ * \see unbind()
+ * \see get_global_y()
+ */
 fn get_global_x($object)
 {
 	$x=$object.x
@@ -256,7 +501,7 @@ fn get_global_x($object)
 			$x+WINDOW_XSIZE div 2
 		}
 	}
-	else{if $object.parent>=0
+	else{if $object.parent>=0&&!$object.parent.gui
 	{
 		$x+get_global_x($object.parent)
 		$x+1+($object.parent.width-2)div 2
@@ -282,6 +527,14 @@ fn get_global_x($object)
 	}}
 	ret($x)
 }
+/**
+ * \brief Returns an inherited y coordinate of the GUI element - its screen coordinate.
+ * \param object a GUI element.
+ * \return An inherited y coordinate.
+ * \see bind()
+ * \see unbind()
+ * \see get_global_x()
+ */
 fn get_global_y($object)
 {
 	$y=$object.y
@@ -296,7 +549,7 @@ fn get_global_y($object)
 			$y+WINDOW_YSIZE div 2
 		}
 	}
-	else{if $object.parent>=0
+	else{if $object.parent>=0&&!$object.parent.gui
 	{
 		$y+get_global_y($object.parent)
 		$y+1+($object.parent.height-2)div 2
@@ -322,27 +575,93 @@ fn get_global_y($object)
 	}}
 	ret($y)
 }
+/**
+ * \brief Handles events of elments bound to the GUI container. Put this function in your event loop.
+ * \param gui a GUI container.
+ * \see get_window_event()
+ * \see get_button_event()
+ * \see new_GUI()
+ */
+fn get_GUI_event($gui)
+{
+	$a=get_size($gui.windows) while $a!=0
+	{
+		$a-1
+		if $gui.windows[$a]>=0
+		{
+			get_window_event($gui.windows[$a])
+		}
+	}
+	if $gui.window_focus
+	{
+		$a=get_size($gui.buttons) while $a!=0
+		{
+			$a-1
+			if $gui.buttons[$a]>=0
+			{
+				get_button_event($gui.buttons[$a])
+			}
+		}
+	}
+}
+/**
+ * \brief Handles events of the window and its bound elments. Put this function in your event loop.
+ * \param window
+ * \see get_GUI_event()
+ * \see get_button_event()
+ * \see new_window()
+ */
 fn get_window_event($window)
 {
+	$main_event=0
+	if $window.parent.gui
+	{
+		if $window.parent.window_focus
+		{
+			if $window.parent.windows[get_size($window.parent.windows)-1]!=$window
+			{
+				ret
+			}
+			else
+			{
+				$main_event=1
+			}
+		}
+	}
+	else
+	{
+		$main_event=1
+	}
 	$x=get_global_x($window)
 	$y=get_global_y($window)
-	$safe_area_border=10
+	if !$main_event
+	{
+		if EVT[EVT_TYPE]==EVT_MOUSEBUTTONDOWN&&EVT[EVT_X]>=$x&&EVT[EVT_X]<$x+$window.width&&EVT[EVT_Y]>=$y-61&&EVT[EVT_Y]<$y+$window.height
+		{
+			$window.parent.window_focus=1
+			$a=get_size($window.parent.windows)-1 while $window.parent.windows[$a]!=$window
+			{
+				$a-1
+			}
+			copy($window.parent.windows, $window.parent.windows, $a, $a+1)
+			$window.parent.windows[get_size($window.parent.windows)-1]=$window
+		}
+		else
+		{
+			ret
+		}
+	}
+	$min_width=402+WINDOW_SAFE_AREA*3
+	$min_height=102+WINDOW_SAFE_AREA*2
 	if $window.flags&WINDOW_FLAG_DRAGGABLE
 	{
 		if EVT[EVT_KEY]==KEY_MOUSE_LEFT
 		{
 			if EVT[EVT_TYPE]==EVT_MOUSEBUTTONDOWN
 			{
-				if $window.flags&WINDOW_FLAG_RESIZEABLE
-				{
-
-				}
-				else{if EVT[EVT_X]>=$x&&EVT[EVT_X]<$x+$window.width&&EVT[EVT_Y]>=$y-61&&EVT[EVT_Y]<$y
-				{
-					$window.drag=1
-					$window.drag_x=EVT[EVT_X]
-					$window.drag_y=EVT[EVT_Y]
-				}}
+				$window.drag=1
+				$window.drag_x=EVT[EVT_X]
+				$window.drag_y=EVT[EVT_Y]
 			}
 			else{if EVT[EVT_TYPE]==EVT_MOUSEBUTTONUP
 			{
@@ -351,36 +670,150 @@ fn get_window_event($window)
 		}
 		if EVT[EVT_TYPE]==EVT_MOUSEMOVE&&$window.drag
 		{
+			$resize=0
 			if $window.flags&WINDOW_FLAG_RESIZEABLE
 			{
-
+				if $window.drag_x>=$x&&$window.drag_x<$x+WINDOW_SAFE_AREA
+				{
+					$resize=1
+					$window.x+EVT[EVT_X]-$window.drag_x
+					$window.width-EVT[EVT_X]-$window.drag_x
+					$window.drag_x=EVT[EVT_X]
+					$resize_x=get_global_x($window)
+					if $resize_x<-WINDOW_XSIZE div 2
+					{
+						$window.x-$resize_x+WINDOW_XSIZE div 2
+						$window.width+$resize_x+WINDOW_XSIZE div 2
+						$window.drag_x-$resize_x+WINDOW_XSIZE div 2
+					}
+					else{if $window.width<$min_width
+					{
+						$window.x+$window.width-$min_width
+						$window.drag_x+$window.width-$min_width
+						$window.width=$min_width
+					}}
+				}
+				if $window.drag_y>=$y-61&&$window.drag_y<$y-61+WINDOW_SAFE_AREA
+				{
+					$resize=1
+					$window.y+EVT[EVT_Y]-$window.drag_y
+					$window.height-EVT[EVT_Y]-$window.drag_y
+					$window.drag_y=EVT[EVT_Y]
+					$resize_y=get_global_y($window)
+					if $resize_y-61<-WINDOW_YSIZE div 2
+					{
+						$window.y-$resize_y-61+WINDOW_YSIZE div 2
+						$window.height+$resize_y-61+WINDOW_YSIZE div 2
+						$window.drag_y-$resize_y-61+WINDOW_YSIZE div 2
+					}
+					else{if $window.height<$min_height
+					{
+						$window.y+$window.height-$min_height
+						$window.drag_y+$window.height-$min_height
+						$window.height=$min_height
+					}}
+				}
+				if $window.drag_x>=$x+$window.width-WINDOW_SAFE_AREA&&$window.drag_x<$x+$window.width
+				{
+					$resize=1
+					$window.width+EVT[EVT_X]-$window.drag_x
+					$window.drag_x=EVT[EVT_X]
+					$resize_x=get_global_x($window)
+					if $window.width+$resize_x>WINDOW_XSIZE div 2
+					{
+						$window.drag_x+WINDOW_XSIZE div 2-$resize_x-$window.width
+						$window.width=WINDOW_XSIZE div 2-$resize_x
+					}
+					else{if $window.width<$min_width
+					{
+						$window.drag_x+$min_width-$window.width
+						$window.width=$min_width
+					}}
+				}
+				if $window.drag_y>=$y+$window.height-WINDOW_SAFE_AREA&&$window.drag_y<$y+$window.height
+				{
+					$resize=1
+					$window.height+EVT[EVT_Y]-$window.drag_y
+					$window.drag_y=EVT[EVT_Y]
+					$resize_y=get_global_y($window)
+					if $window.height+$resize_y>WINDOW_YSIZE div 2
+					{
+						$window.drag_y+WINDOW_YSIZE div 2-$resize_y-$window.height
+						$window.height=WINDOW_YSIZE div 2-$resize_y
+					}
+					else{if $window.height<$min_height
+					{
+						$window.drag_y+$min_height-$window.height
+						$window.height=$min_height
+					}}
+				}
 			}
-			else
+			if !$resize&&$window.drag_x>=$x&&$window.drag_x<$x+$window.width&&$window.drag_y>=$y-61&&$window.drag_y<$y
 			{
 				$window.x+EVT[EVT_X]-$window.drag_x
 				$window.y+EVT[EVT_Y]-$window.drag_y
 				$window.drag_x=EVT[EVT_X]
 				$window.drag_y=EVT[EVT_Y]
+				$resize_x=get_global_x($window)
+				$resize_y=get_global_y($window)
+				if $resize_x<-WINDOW_XSIZE div 2
+				{
+					$window.x-$resize_x+WINDOW_XSIZE div 2
+					$window.drag_x-$resize_x+WINDOW_XSIZE div 2
+				}
+				if $resize_y-61<-WINDOW_YSIZE div 2
+				{
+					$window.y-$resize_y-61+WINDOW_YSIZE div 2
+					$window.drag_y-$resize_y-61+WINDOW_YSIZE div 2
+				}
+				if $window.width+$resize_x>WINDOW_XSIZE div 2
+				{
+					$window.x+WINDOW_XSIZE div 2-$resize_x-$window.width
+					$window.drag_x+WINDOW_XSIZE div 2-$resize_x-$window.width
+				}
+				if $window.height+$resize_y>WINDOW_YSIZE div 2
+				{
+					$window.y+WINDOW_YSIZE div 2-$resize_y-$window.height
+					$window.drag_y+WINDOW_YSIZE div 2-$resize_y-$window.height
+				}
 			}
 		}
 	}
-	$a=0 while $a!=get_size($window.buttons)
+	$a=get_size($window.buttons) while $a!=0
 	{
-		$result=get_button_event($window.buttons[$a])
-		if $window.type==WINDOW_ALERT||$window.type==WINDOW_DIALOGUE&&$result
+		$a-1
+		if $window.buttons[$a]>=0
 		{
-			remove_window($window)
-			ret($result&0x7FFFFFFF)
+			$result=get_button_event($window.buttons[$a])
+			if $result
+			{
+				if $window.type==WINDOW_ALERT||$window.type==WINDOW_DIALOG
+				{
+					remove_window($window, 0)
+					ret
+				}
+			}
 		}
-		$a+1
+	}
+	if $window.parent.gui&&$window==$window.parent.windows[get_size($window.parent.windows)-1]&&EVT[EVT_TYPE]==EVT_MOUSEBUTTONDOWN&&(EVT[EVT_X]<$x||EVT[EVT_X]>=$x+$window.width||EVT[EVT_Y]<$y-61||EVT[EVT_Y]>=$y+$window.height)
+	{
+		$window.parent.window_focus=0
 	}
 }
+/**
+ * \brief Handles events of the button. Put this function in your event loop.
+ * \param button
+ * \return 1 if main event happened.
+ * \see get_GUI_event()
+ * \see get_window_event()
+ * \see new_button()
+ */
 fn get_button_event($button)
 {
-	$x=get_global_x($button)
-	$y=get_global_y($button)
 	if $button.active
 	{
+		$x=get_global_x($button)
+		$y=get_global_y($button)
 		$do_it=0
 		if EVT[EVT_KEY]==$button.keyboard_key
 		{
@@ -448,15 +881,64 @@ fn get_button_event($button)
 			{
 				$button.switch_state^1
 			}
-			$result=$button.function($button, $button.arguments)
+			$button.function($button, $button.arguments)
 			if $button.type==BUTTON_SELECT
 			{
 				$button.selected=1
 			}
-			ret($result)
+			ret(1)
 		}
 	}
 }
+/**
+ * \brief Draws elements bound to the GUI container.
+ * \param gui a GUI container.
+ * \see get_global_x()
+ * \see get_global_y()
+ * \see new_GUI()
+ */
+fn draw_GUI($gui)
+{
+	$a=0 while $a!=get_size($gui.texts)
+	{
+		if $gui.texts[$a]>=0
+		{
+			draw_text($gui.texts[$a])
+		}
+		$a+1
+	}
+	$a=0 while $a!=get_size($gui.images)
+	{
+		if $gui.images[$a]>=0
+		{
+			draw_image($gui.images[$a])
+		}
+		$a+1
+	}
+	$a=0 while $a!=get_size($gui.buttons)
+	{
+		if $gui.buttons[$a]>=0
+		{
+			draw_button($gui.buttons[$a])
+		}
+		$a+1
+	}
+	$a=0 while $a!=get_size($gui.windows)
+	{
+		if $gui.windows[$a]>=0
+		{
+			draw_window($gui.windows[$a])
+		}
+		$a+1
+	}
+}
+/**
+ * \brief Draws a window and its bound elements.
+ * \param window
+ * \see get_global_x()
+ * \see get_global_y()
+ * \see new_window()
+ */
 fn draw_window($window)
 {
 	$x=get_global_x($window)
@@ -464,25 +946,48 @@ fn draw_window($window)
 	$border_alpha=255
 	$title_alpha=128
 	$body_alpha=64
+	if $window.parent.gui
+	{
+		if $window.parent.window_focus
+		{
+			if $window.parent.windows[get_size($window.parent.windows)-1]!=$window
+			{
+				$color=get_color(128+get_red($window.color)*127 div 255, 128+get_green($window.color)*127 div 255, 128+get_blue($window.color)*127 div 255)
+			}
+			else
+			{
+				$color=$window.color
+			}
+		}
+		else
+		{
+			$color=get_color(128+get_red($window.color)*127 div 255, 128+get_green($window.color)*127 div 255, 128+get_blue($window.color)*127 div 255)
+		}
+	}
+	else
+	{
+		$color=$window.color
+	}
 	$transp=get_transp()
+	transp($transp*$window.transp div 255)
 	if COLOR_THEME==THEME_DARK
 	{
-		fbox($x+1, $y-60, $window.width-2, 60, get_color(get_red($window.color)*$title_alpha div 255, get_green($window.color)*$title_alpha div 255, get_blue($window.color)*$title_alpha div 255))
+		fbox($x+1, $y-60, $window.width-2, 60, get_color(get_red($color)*$title_alpha div 255, get_green($color)*$title_alpha div 255, get_blue($color)*$title_alpha div 255))
 	}
 	else{if COLOR_THEME==THEME_LIGHT
 	{
-		fbox($x+1, $y-60, $window.width-2, 60, get_color($title_alpha+get_red($window.color)*$title_alpha div 256, $title_alpha+get_green($window.color)*$title_alpha div 256, $title_alpha+get_blue($window.color)*$title_alpha div 256))
+		fbox($x+1, $y-60, $window.width-2, 60, get_color($title_alpha+get_red($color)*$title_alpha div 256, $title_alpha+get_green($color)*$title_alpha div 256, $title_alpha+get_blue($color)*$title_alpha div 256))
 	}}
-	transp($transp*$body_alpha div 255)
-	fbox($x+1, $y+1, $window.width-2, $window.height-2, $window.color)
-	transp($transp)
+	transp(get_transp()*$body_alpha div 255)
+	fbox($x+1, $y+1, $window.width-2, $window.height-2, $color)
+	transp($transp*$window.transp div 255)
 	$a=0 while $a!=get_size($window.texts)
 	{
 		if $a==0
 		{
 			if COLOR_THEME==THEME_LIGHT
 			{
-				$window.texts[$a].color=get_color(get_red($window.color)*64 div 255, get_green($window.color)*64 div 255, get_blue($window.color)*64 div 255)
+				$window.texts[$a].color=get_color(get_red($color)*64 div 255, get_green($color)*64 div 255, get_blue($color)*64 div 255)
 			}
 			draw_text($window.texts[$a])
 		}
@@ -490,6 +995,14 @@ fn draw_window($window)
 		{
 			draw_text($window.texts[$a])
 		}}
+		$a+1
+	}
+	$a=0 while $a!=get_size($window.images)
+	{
+		if $window.images[$a]>=0
+		{
+			draw_image($window.images[$a])
+		}
 		$a+1
 	}
 	$a=0 while $a!=get_size($window.buttons)
@@ -500,19 +1013,52 @@ fn draw_window($window)
 		}
 		$a+1
 	}
-	transp($transp*$border_alpha div 255)
-	box($x, $y-61, $window.width-1, $window.height+60, $window.color)
-	line($x, $y, $x+$window.width-1, $y, $window.color)
+	transp(get_transp()*$border_alpha div 255)
+	box($x, $y-61, $window.width-1, $window.height+60, $color)
+	line($x, $y, $x+$window.width-1, $y, $color)
 	transp($transp)
 }
+/**
+ * \brief Draws a text.
+ * \param text
+ * \see get_global_x()
+ * \see get_global_y()
+ * \see new_text()
+ */
 fn draw_text($text)
 {
 	$x=get_global_x($text)
 	$y=get_global_y($text)
 	t_scale($text.size, $text.size, 1)
+	$transp=get_transp()
+	transp($transp*$text.transp div 255)
 	print($text.string, $x/$text.size, $y/$text.size, $text.color, $text.text_align, $text.width/$text.size)
+	transp($transp)
 	t_reset()
 }
+/**
+ * \brief Draws an image.
+ * \param image
+ * \see get_global_x()
+ * \see get_global_y()
+ * \see new_image()
+ */
+fn draw_image($image)
+{
+	$x=get_global_x($image)
+	$y=get_global_y($image)
+	$transp=get_transp()
+	transp($transp*$image.transp div 255)
+	pixi($image.source, $x+$image.width div 2, $y+$image.height div 2, $image.color, $image.width/get_xsize($image.source), $image.height/get_ysize($image.source))
+	transp($transp)
+}
+/**
+ * \brief Draws a button.
+ * \param button
+ * \see get_global_x()
+ * \see get_global_y()
+ * \see new_button()
+ */
 fn draw_button($button)
 {
 	$x=get_global_x($button)
@@ -520,7 +1066,34 @@ fn draw_button($button)
 	$border_alpha=255
 	$body_alpha=64
 	$normal=0
-	if $button.active
+	$active=0
+	if $button.parent.gui
+	{
+		$active=!$button.parent.window_focus
+	}
+	else{if $button.parent.window
+	{
+		if $button.parent.parent.gui
+		{
+			if $button.parent.parent.window_focus
+			{
+				if $button.parent.parent.windows[get_size($button.parent.parent.windows)-1]==$button.parent
+				{
+					$active=1
+				}
+			}
+		}
+		else
+		{
+			$active=1
+		}
+	}
+	else
+	{
+		$active=1
+	}}
+	$active&&$button.active
+	if $active
 	{
 		if $button.type==BUTTON_STANDARD
 		{
@@ -591,10 +1164,10 @@ fn draw_button($button)
 	$transp=get_transp()
 	if $body_alpha!=0
 	{
-		transp($transp*$body_alpha div 255)
+		transp($transp*$button.transp div 255*$body_alpha div 255)
 		fbox($x+1, $y+1, $button.width-2, $button.height-2, $button_color)
 	}
-	transp($transp)
+	transp($transp*$button.transp div 255)
 	if COLOR_THEME==THEME_LIGHT
 	{
 		$button.title.color=get_color(get_red($button.color)*64 div 255, get_green($button.color)*64 div 255, get_blue($button.color)*64 div 255)
@@ -603,8 +1176,8 @@ fn draw_button($button)
 	draw_text($button.title)
 	if $border_alpha!=0
 	{
-		transp($transp*$border_alpha div 255)
+		transp(get_transp()*$border_alpha div 255)
 		box($x, $y, $button.width-1, $button.height-1, $button_color)
-		transp($transp)
 	}
+	transp($transp)
 }

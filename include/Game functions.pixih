@@ -73,43 +73,51 @@ fn process_particle($index)
 {
 	if physic_frames<particles[8, $index]+particles[9, $index]
 	{
-		particles[10, $index]=(particles[1, $index]+crossfade(physic_frames, 0, particles[5, $index], particles[8, $index], physics_update_frequency, CURVE_LINEAR)-camera_x)*meter_size*camera_scale
-		particles[11, $index]=(particles[2, $index]+crossfade(physic_frames, 0, particles[6, $index], particles[8, $index], physics_update_frequency, CURVE_LINEAR)-camera_y)*meter_size*camera_scale
-		if particles[0, $index]==0
+		particles[11, $index]=(particles[1, $index]+crossfade(physic_frames, 0, particles[5, $index], particles[8, $index], physics_update_frequency, CURVE_LINEAR)-camera_x)*meter_size*camera_scale
+		particles[12, $index]=(particles[2, $index]+crossfade(physic_frames, 0, particles[6, $index], particles[8, $index], physics_update_frequency, CURVE_LINEAR)-camera_y)*meter_size*camera_scale
+		if particles[11, $index]>=-WINDOW_XSIZE div 2&&particles[11, $index]<WINDOW_XSIZE div 2&&particles[12, $index]>=-WINDOW_YSIZE div 2&&particles[12, $index]<WINDOW_YSIZE div 2
 		{
-			particles[13, $index]=meter_size*particles[4, $index]*camera_scale/32
-			particles[17, $index]=crossfade(physic_frames, 256, 0, particles[8, $index], particles[9, $index], CURVE_SLOW)
+			particles[10, $index]=1
+			if particles[0, $index]==0
+			{
+				particles[14, $index]=meter_size*particles[4, $index]*camera_scale/32
+				particles[16, $index]=crossfade(physic_frames, 256, 0, particles[8, $index], particles[9, $index], CURVE_SLOW)
+			}
+			else
+			{
+				particles[13, $index]=particles[3, $index]+crossfade(physic_frames, 0, particles[7, $index], particles[8, $index], physics_update_frequency, CURVE_LINEAR)
+				if particles[0, $index]==1
+				{
+					particles[14, $index]=ball_size*meter_size*camera_scale*crossfade(physic_frames, 1, 4, particles[8, $index], particles[9, $index], CURVE_LINEAR)/M_SQRT2
+					$fade=crossfade(sqrt(x_speed*x_speed+y_speed*y_speed), 256, 0, 200, 100, CURVE_FAST)
+					if y>=0
+					{
+						$height=256
+					}
+					else
+					{
+						$height=crossfade(y, 0, 256, -atmosphere_height, atmosphere_height, CURVE_FAST)
+					}
+					particles[15, $index]=get_color(255, 128+$fade/2, $fade)
+					particles[16, $index]=crossfade(physic_frames, $height, 0, particles[8, $index], particles[9, $index], CURVE_LINEAR)
+				}
+				else{if particles[0, $index]==2
+				{
+					particles[14, $index]=meter_size*particles[4, $index]*camera_scale
+					$fade=crossfade(physic_frames, 768, 0, particles[8, $index], particles[9, $index], CURVE_LINEAR)
+					particles[15, $index]=get_color(255, $fade-256, $fade-512)
+					particles[16, $index]=$fade
+				}}
+			}
 		}
 		else
 		{
-			particles[12, $index]=particles[3, $index]+crossfade(physic_frames, 0, particles[7, $index], particles[8, $index], physics_update_frequency, CURVE_LINEAR)
-			if particles[0, $index]==1
-			{
-				particles[13, $index]=ball_size*meter_size*camera_scale*crossfade(physic_frames, 1, 4, particles[8, $index], particles[9, $index], CURVE_LINEAR)/M_SQRT2
-				$fade=crossfade(sqrt(x_speed*x_speed+y_speed*y_speed), 256, 0, 200, 100, CURVE_FAST)
-				if y>=0
-				{
-					$height=256
-				}
-				else
-				{
-					$height=crossfade(y, 0, 256, -atmosphere_height, atmosphere_height, CURVE_FAST)
-				}
-				particles[14, $index]=255
-				particles[15, $index]=128+$fade/2
-				particles[16, $index]=$fade
-				particles[17, $index]=crossfade(physic_frames, $height, 0, particles[8, $index], particles[9, $index], CURVE_LINEAR)
-			}
-			else{if particles[0, $index]==2
-			{
-				particles[13, $index]=meter_size*particles[4, $index]*camera_scale
-				$fade=crossfade(physic_frames, 768, 0, particles[8, $index], particles[9, $index], CURVE_LINEAR)
-				particles[14, $index]=255
-				particles[15, $index]=$fade-256
-				particles[16, $index]=$fade-512
-				particles[17, $index]=$fade
-			}}
+			particles[10, $index]=0
 		}
+	}
+	else
+	{
+		particles[10, $index]=0
 	}
 }
 fn thread_function($unused, $thread)
@@ -138,26 +146,23 @@ fn draw_particles($types)
 {
 	$a=0 while $a!=get_ysize(particles)
 	{
-		if physic_frames<particles[8, $a]+particles[9, $a]
+		if particles[10, $a]
 		{
+			$transp=get_transp()
+			transp(particles[16, $a])
 			if $types==0||$types&0b001&&particles[0, $a]==0
 			{
-				$transp=get_transp()
-				transp(particles[17, $a])
-				pixi(texture_halo, particles[10, $a], particles[11, $a], SNEG, particles[13, $a], particles[13, $a])
+				pixi(texture_halo, particles[11, $a], particles[12, $a], SNEG, particles[14, $a], particles[14, $a])
 				//fbox(particles[10, $a], particles[11, $a], particles[13, $a]*32, particles[13, $a]*32, SNEG)
-				transp($transp)
 			}
 			else{if $types==0||$types&0b110&&(particles[0, $a]==1||particles[0, $a]==2)
 			{
-				t_translate(particles[10, $a], particles[11, $a], 0)
-				t_rotate(particles[12, $a], 0, 0, 1)
-				$transp=get_transp()
-				transp(particles[17, $a])
-				fbox(-particles[13, $a]/2, -particles[13, $a]/2, particles[13, $a], particles[13, $a], get_color(particles[14, $a], particles[15, $a], particles[16, $a]))
+				t_translate(particles[11, $a], particles[12, $a], 0)
+				t_rotate(particles[13, $a], 0, 0, 1)
+				fbox(-particles[14, $a]/2, -particles[14, $a]/2, particles[14, $a], particles[14, $a], particles[15, $a])
 				t_reset()
-				transp($transp)
 			}}
+			transp($transp)
 		}
 		$a+1
 	}
