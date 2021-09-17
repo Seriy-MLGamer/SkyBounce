@@ -1,6 +1,7 @@
 include "include/mlg user interface.pixih"
 
 COLOR_THEME=THEME_DARK
+GUI_SCALE=WINDOW_XSIZE/1920
 AMOGUS=load("share/7b8b9cbc22da0f51cc6710d470a70abd.png")
 GUI=new_GUI()
 win=new_window("Important!", -400, -300, 800, 600, WINDOW_DIALOG, WINDOW_FLAG_DRAGGABLE|WINDOW_FLAG_RESIZEABLE)

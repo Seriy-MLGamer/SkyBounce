@@ -2,12 +2,15 @@ include "include/MLG user interface.pixih"
 include "include/MLG easy programming.pixih"
 include "include/Game functions.pixih"
 
+GUI_SCALE=sqrt(WINDOW_XSIZE*WINDOW_XSIZE+WINDOW_YSIZE*WINDOW_YSIZE)/sqrt(1920*1920+1080*1080)
+
 meter_size=10
 ball_size=.5
 atmosphere_height=200
 gravity=9.8
 press_gravity=gravity*8
 physics_update_frequency=1000
+particles_update_frequency=1000
 
 generation_size=2000
 generation_chunk_size=150
@@ -17,9 +20,26 @@ generation_damping=.98
 
 star_count=1000
 
-camera_scale=2
+camera_offset_x=.5
+camera_offset_y=0
+camera_resize_time=500
+camera_normal_scale=100*GUI_SCALE/meter_size
+camera_normal_x=.5
+camera_normal_y=0
+camera_higher1_scale=25*GUI_SCALE/meter_size
+camera_higher1_x=.5
+camera_higher1_y=.5
+camera_higher2_scale=12.5*GUI_SCALE/meter_size
+camera_higher2_x=.5
+camera_higher2_y=.5
+camera_faster=100
+camera_faster_scale=50*GUI_SCALE/meter_size
+camera_faster_x=.5
+camera_faster_y=-.5
+camera_slower=-10
+camera_scale=camera_normal_scale
 menu_camera_y=-atmosphere_height-WINDOW_YSIZE div 2/meter_size/camera_scale
-camera_x=600/meter_size/camera_scale
+camera_x=camera_offset_x*WINDOW_XSIZE div 2/meter_size/camera_scale
 camera_y=menu_camera_y
 
 texture_stars=new(WINDOW_XSIZE, WINDOW_YSIZE)
@@ -42,8 +62,8 @@ set_flags(texture_halo, GL_MIN_LINEAR|GL_MAG_LINEAR|GL_NICEST)
  * \param 10 is drawable.
  * \param 11 x calculated for rendering.
  * \param 12 y calculated for rendering.
- * \param 13 rotation, calculated for rendering.
- * \param 14 size, calculated for rendering.
+ * \param 13 rotation calculated for rendering.
+ * \param 14 size calculated for rendering.
  * \param 15 calculated color.
  * \param 16 calculated transparency.
  */
@@ -85,7 +105,7 @@ fn gl_callback()
 		}
 		if time<1000
 		{
-			camera_y=crossfade(time, menu_camera_y/2, 300/meter_size/camera_scale-1, 0, 1000, CURVE_FAST)
+			camera_y=crossfade(time, menu_camera_y/2, camera_offset_y*WINDOW_XSIZE div 2/meter_size/camera_scale-1, 0, 1000, CURVE_FAST)
 		}
 		running_function=1
 		done=0
@@ -94,115 +114,205 @@ fn gl_callback()
 		draw_particles(0b001)
 		atmosphere()
 		draw_particles(0b110)
-		a=-WINDOW_XSIZE div 2 while a<WINDOW_XSIZE div 2
+		b=(generation_offset-camera_x*meter_size)*camera_scale
+		c=-WINDOW_XSIZE div 2
+		if b>c
+		{
+			a=b
+		}
+		else
+		{
+			a=c
+		}
+		while a<WINDOW_XSIZE div 2
 		{
 			b=a/camera_scale+camera_x*meter_size-generation_offset
-			fbox(a, (crossfade(b, generation[b], generation[b+1], floor(b), 1, CURVE_LINEAR)-camera_y)*meter_size*camera_scale, 4, WINDOW_YSIZE div 2-(crossfade(b, generation[b], generation[b+1], floor(b), 1, CURVE_LINEAR)-camera_y)*meter_size*camera_scale, #000000)
+			if generation[b]<atmosphere_height+1
+			{
+				fbox(a, (crossfade(b, generation[b], generation[b+1], floor(b), 1, CURVE_LINEAR)-camera_y)*meter_size*camera_scale, 4, WINDOW_YSIZE div 2-(crossfade(b, generation[b], generation[b+1], floor(b), 1, CURVE_LINEAR)-camera_y)*meter_size*camera_scale, #000000)
+			}
 			a+4
 		}
-		if !crush
+		if !crashed
 		{
 			draw_ball(255, 0, 0, 255)
 		}
-		sprintf(0, "%d FPS.\nDistance: %f.\nSpeed: %f.", FPS, x, sqrt(x_speed*x_speed+y_speed*y_speed))
+		sprintf(0, "%d FPS.\nDistance: %f.\nSpeed: %f.\nGrounded: %d.", FPS, x, sqrt(speed_x*speed_x+speed_y*speed_y), grounded)
 		print(0, -WINDOW_XSIZE div 2, -WINDOW_YSIZE div 2, #008080, TOP|LEFT)
-		while physic_frames!=floor(time/1000*physics_update_frequency)
+		while particles_frames!=floor(time/1000*particles_update_frequency)
 		{
-			if floor(rand()/32768*.125*pow(meter_size*camera_scale/100, 2)*physics_update_frequency)==0
+			if floor(rand()/32768*.125*pow(meter_size*camera_scale/100, 2)*particles_update_frequency)==0
 			{
 				new_particle(crossfade(rand(), -WINDOW_XSIZE, WINDOW_XSIZE, 0, 32768, CURVE_LINEAR)/meter_size/camera_scale+camera_x, crossfade(rand(), -WINDOW_YSIZE, WINDOW_YSIZE, 0, 32768, CURVE_LINEAR)/meter_size/camera_scale+camera_y, 0, 0)
 			}
-			if time>=1000
+			if y>=-200
 			{
-				collide=0
-				a=0 while a!=17
+				if sqrt(speed_x*speed_x+speed_y*speed_y)>=300
 				{
-					b=(x+x_speed/physics_update_frequency+cos(a/16*M_PI)*ball_size/2)*meter_size-generation_offset
-					if y+y_speed/physics_update_frequency+sin(a/16*M_PI)*ball_size/2>=crossfade(b, generation[b], generation[b+1], floor(b), 1, CURVE_LINEAR)
+					new_particle(x, y, 2, 0)
+				}
+				else{if sqrt(speed_x*speed_x+speed_y*speed_y)>=100
+				{
+					new_particle(x, y, 1, 0)
+				}}
+			}
+			while physic_frames!=floor(particles_frames/particles_update_frequency*physics_update_frequency)
+			{
+				if time>=1000&&!crashed
+				{
+					collide=0
+					a=0 while a!=17
 					{
-						vector_angle=get_vector_angle(1/meter_size, generation[b+1]-generation[b])
-						vector_x=x_speed*cos(-vector_angle)-y_speed*sin(-vector_angle)
-						vector_y=y_speed*cos(-vector_angle)+x_speed*sin(-vector_angle)
-						if vector_y>=50
+						offset_x=x+cos(a/16*M_PI)*ball_size/2
+						offset_y=y+sin(a/16*M_PI)*ball_size/2
+						b=offset_x*meter_size-generation_offset
+						if b>=0
 						{
-							c=0 while c!=64
+							generation_under_ball=crossfade(b, generation[b], generation[b+1], floor(b), 1, CURVE_LINEAR)
+							if generation_under_ball<atmosphere_height+1
 							{
-								new_particle(x, y, 2, 2)
-								c+1
+								if offset_y>=generation_under_ball
+								{
+									vector_angle=get_vector_angle(1/meter_size, generation[b+1]-generation[b])
+									vector_x=speed_x*cos(-vector_angle)-speed_y*sin(-vector_angle)
+									vector_y=speed_y*cos(-vector_angle)+speed_x*sin(-vector_angle)
+									if vector_y>=50
+									{
+										c=0 while c!=64
+										{
+											new_particle(x, y, 2, 2)
+											c+1
+										}
+										crashed=0//1
+										//camera_x=x+6/camera_scale
+										//camera_y=y+3/camera_scale
+									}
+									else{if vector_y>=10
+									{
+										c=0 while c!=64
+										{
+											new_particle(x, y, 2, 1)
+											c+1
+										}
+									}}
+									vector_y*-.1
+									speed_x=vector_x*cos(vector_angle)-vector_y*sin(vector_angle)
+									speed_y=vector_y*cos(vector_angle)+vector_x*sin(vector_angle)
+									//b=offset_x*meter_size-generation_offset
+									//generation_under_ball=crossfade(b, generation[b], generation[b+1], floor(b), 1, CURVE_LINEAR)
+									c=(generation_under_ball-offset_y)*cos(vector_angle)
+									x-c*sin(vector_angle)
+									y+c*cos(vector_angle)
+									collide=1
+									grounded=1
+								}
 							}
-							crush=0//1
-							//camera_x=x+6/camera_scale
-							//camera_y=y+3/camera_scale
 						}
-						else{if vector_y>=10
+						a+1
+					}
+					if !collide&&grounded
+					{
+						if sqrt(speed_x*speed_x+speed_y*speed_y)>=camera_faster
 						{
-							c=0 while c!=64
+							pre_resize_camera()
+							faster=1
+						}
+						grounded=0
+					}
+					if grounded&&ball_acceleration&&acceleration
+					{
+						speed_x+64/physics_update_frequency
+					}
+					x+speed_x/physics_update_frequency
+					y+speed_y/physics_update_frequency
+					if !crashed
+					{
+						if camera_slower<speed_y
+						{
+							faster=0
+						}
+						if faster
+						{
+							resize_camera(camera_faster_x, camera_faster_y, camera_faster_scale)
+						}
+						else{if generation_offset-x*meter_size<0&&generation_under_ball<atmosphere_height+1
+						{
+							if generation_under_ball-y>=(WINDOW_YSIZE div 2+WINDOW_YSIZE*0)/20/GUI_SCALE
 							{
-								new_particle(x, y, 2, 1)
-								c+1
+								if higher!=2
+								{
+									pre_resize_camera()
+									higher=2
+								}
+								resize_camera(camera_higher2_x, camera_higher2_y, camera_higher2_scale)
 							}
+							else{if generation_under_ball-y>=WINDOW_YSIZE div 2/100/GUI_SCALE
+							{
+								if higher!=1
+								{
+									pre_resize_camera()
+									higher=1
+								}
+								resize_camera(camera_higher1_x, camera_higher1_y, camera_higher1_scale)
+							}
+							else
+							{
+								if higher
+								{
+									pre_resize_camera()
+									higher=0
+								}
+								resize_camera(camera_normal_x, camera_normal_y, camera_normal_scale)
+							}}
+						}
+						else
+						{
+							if higher!=2
+							{
+								pre_resize_camera()
+								higher=2
+							}
+							resize_camera(camera_higher2_x, camera_higher2_y, camera_higher2_scale)
 						}}
-						collide=1
-						vector_y*-.1
-						x_speed=vector_x*cos(vector_angle)-vector_y*sin(vector_angle)
-						y_speed=vector_y*cos(vector_angle)+vector_x*sin(vector_angle)
-						b=(x+cos(a/16*M_PI)*ball_size/2)*meter_size-generation_offset
-						if y+sin(a/16*M_PI)*ball_size/2>=crossfade(b, generation[b], generation[b+1], floor(b), 1, CURVE_LINEAR)
-						{
-							c=(crossfade(b, generation[b], generation[b+1], floor(b), 1, CURVE_LINEAR)-sin(a/16*M_PI)*ball_size/2-y)*cos(vector_angle)
-							x-c*sin(vector_angle)
-							y+c*cos(vector_angle)
-						}
+						camera_speed_x+1000*(x+camera_offset_x*WINDOW_XSIZE div 2/meter_size/camera_scale-camera_x)/physics_update_frequency
+						camera_speed_x*pow(.98, 1000/physics_update_frequency)
+						camera_speed_y+(1000*(y+camera_offset_y*WINDOW_YSIZE div 2/meter_size/camera_scale-camera_y)+gravity)/physics_update_frequency
+						camera_speed_y*pow(.98, 1000/physics_update_frequency)
+						camera_x+camera_speed_x/physics_update_frequency
+						camera_y+camera_speed_y/physics_update_frequency
+						//camera_x=x+600/meter_size/camera_scale
+						//camera_y=y+300/meter_size/camera_scale
 					}
-					a+1
-				}
-				if collide&&ball_acceleration&&acceleration
-				{
-					x_speed+64/physics_update_frequency
-				}
-				x+x_speed/physics_update_frequency
-				y+y_speed/physics_update_frequency
-				if !crush
-				{
-					camera_speed_x+1000*(x+600/meter_size/camera_scale-camera_x)/physics_update_frequency
-					camera_speed_x*pow(.99, 1000/physics_update_frequency)
-					camera_speed_y+1000*(y+300/meter_size/camera_scale-camera_y)/physics_update_frequency
-					camera_speed_y*pow(.99, 1000/physics_update_frequency)
-					camera_x+camera_speed_x/physics_update_frequency
-					camera_y+camera_speed_y/physics_update_frequency
-					//camera_x=x+600/meter_size/camera_scale
-					//camera_y=y+300/meter_size/camera_scale
-				}
-				if y>=-200
-				{
-					if sqrt(x_speed*x_speed+y_speed*y_speed)>=300
+					if acceleration
 					{
-						new_particle(x, y, 2, 0)
-						x_speed/pow(crossfade(y, 1, 1.0001, -atmosphere_height, atmosphere_height, CURVE_SLOW), 1000/physics_update_frequency)
-						y_speed/pow(crossfade(y, 1, 1.0001, -atmosphere_height, atmosphere_height, CURVE_SLOW), 1000/physics_update_frequency)
-					}
-					else{if sqrt(x_speed*x_speed+y_speed*y_speed)>=100
-					{
-						new_particle(x, y, 1, 0)
-						x_speed/pow(crossfade(y, 1, 1.0002, -atmosphere_height, atmosphere_height, CURVE_SLOW), 1000/physics_update_frequency)
-						y_speed/pow(crossfade(y, 1, 1.0002, -atmosphere_height, atmosphere_height, CURVE_SLOW), 1000/physics_update_frequency)
+						speed_y+press_gravity/physics_update_frequency
 					}
 					else
 					{
-						x_speed/pow(crossfade(y, 1, 1.00005, -atmosphere_height, atmosphere_height, CURVE_SLOW), 1000/physics_update_frequency)
-						y_speed/pow(crossfade(y, 1, 1.00005, -atmosphere_height, atmosphere_height, CURVE_SLOW), 1000/physics_update_frequency)
-					}}
+						speed_y+gravity/physics_update_frequency
+					}
+					if y>=-200
+					{
+						if sqrt(speed_x*speed_x+speed_y*speed_y)>=300
+						{
+							speed_x/pow(crossfade(y, 1, 1.0002, -atmosphere_height, atmosphere_height, CURVE_SLOW), 1000/physics_update_frequency)
+							speed_y/pow(crossfade(y, 1, 1.0002, -atmosphere_height, atmosphere_height, CURVE_SLOW), 1000/physics_update_frequency)
+						}
+						else{if sqrt(speed_x*speed_x+speed_y*speed_y)>=100
+						{
+							speed_x/pow(crossfade(y, 1, 1.0001, -atmosphere_height, atmosphere_height, CURVE_SLOW), 1000/physics_update_frequency)
+							speed_y/pow(crossfade(y, 1, 1.0001, -atmosphere_height, atmosphere_height, CURVE_SLOW), 1000/physics_update_frequency)
+						}
+						else
+						{
+							speed_x/pow(crossfade(y, 1, 1.00005, -atmosphere_height, atmosphere_height, CURVE_SLOW), 1000/physics_update_frequency)
+							speed_y/pow(crossfade(y, 1, 1.00005, -atmosphere_height, atmosphere_height, CURVE_SLOW), 1000/physics_update_frequency)
+						}}
+					}
 				}
-				if acceleration
-				{
-					y_speed+press_gravity/physics_update_frequency
-				}
-				else
-				{
-					y_speed+gravity/physics_update_frequency
-				}
+				physic_frames+1
 			}
-			physic_frames+1
+			particles_frames+1
 		}
 	}
 	else
@@ -321,13 +431,13 @@ fn gl_callback()
 				}
 				draw_GUI(GUI)
 			}}
-			while physic_frames!=floor((time-2000)/1000*physics_update_frequency)
+			while particles_frames!=floor((time-2000)/1000*particles_update_frequency)
 			{
-				if floor(rand()/32768*.125*pow(meter_size*camera_scale/100, 2)*physics_update_frequency)==0
+				if floor(rand()/32768*.125*pow(meter_size*camera_scale/100, 2)*particles_update_frequency)==0
 				{
 					new_particle(crossfade(rand(), -WINDOW_XSIZE, WINDOW_XSIZE, 0, 32768, CURVE_LINEAR)/meter_size/camera_scale+camera_x, crossfade(rand(), -WINDOW_YSIZE, WINDOW_YSIZE, 0, 32768, CURVE_LINEAR)/meter_size/camera_scale+camera_y, 0, 0)
 				}
-				physic_frames+1
+				particles_frames+1
 			}
 		}}
 	}
@@ -337,23 +447,31 @@ call_threads(thread_function)
 set_gl_callback(gl_callback)
 while 1
 {
+	clean(particles)
 	if scene
 	{
-		camera_speed_x=0
-		camera_speed_y=0
 		x=0
 		y=-1
-		x_speed=0
-		y_speed=0
+		speed_x=0
+		speed_y=0
+		camera_speed_x=0
+		camera_speed_y=0
+		timestamp=0
+		higher=0
+		faster=0
+		grounded=0
+		resize_x=.5
+		resize_y=.5
+		resize_scale=1
 		generation=new(generation_size, 1, FLOAT)
-		logf("%d", generation)
-		clean(generation, 100)
+		clean(generation, atmosphere_height+1)
 		generation_offset=floor(WINDOW_XSIZE div 2/camera_scale-generation_size+camera_x*meter_size)
-		generation_x=0
+		generation_x=-meter_size
 		generation_prev_y=0
 		generation_y=0
 		generation_next_y=0
 		generation_speed2=0
+		particles_frames=0
 		physic_frames=0
 		start_timer()
 		while 1
@@ -398,7 +516,7 @@ while 1
 		interface[2].color=GREEN
 		interface[3].text_align=LEFT
 		bind(interface[2], GUI)
-		physic_frames=0
+		particles_frames=0
 		start_timer()
 		while 1
 		{

@@ -1,7 +1,7 @@
 fn new_particle($x, $y, $type, $pattern)
 {
 	particles[0, particles_index]=$type
-	particles[8, particles_index]=physic_frames
+	particles[8, particles_index]=particles_frames
 	if $type==2
 	{
 		particles[3, particles_index]=rand()/32768*360
@@ -11,13 +11,13 @@ fn new_particle($x, $y, $type, $pattern)
 			particles[1, particles_index]=$x+crossfade(rand(), -.1, .1, 0, 32768, CURVE_LINEAR)
 			particles[2, particles_index]=$y+crossfade(rand(), -.1, .1, 0, 32768, CURVE_LINEAR)
 			particles[4, particles_index]=crossfade(rand(), 1, 1.5, 0, 32768, CURVE_LINEAR)*ball_size/M_SQRT2
-			particles[5, particles_index]=x_speed*.4+crossfade(rand(), -20, 20, 0, 32768, CURVE_LINEAR)
-			particles[6, particles_index]=y_speed*.4+crossfade(rand(), -20, 20, 0, 32768, CURVE_LINEAR)
-			particles[9, particles_index]=floor(crossfade(rand(), .035, .045, 0, 32768, CURVE_LINEAR)*physics_update_frequency)
+			particles[5, particles_index]=speed_x*.4+crossfade(rand(), -20, 20, 0, 32768, CURVE_LINEAR)
+			particles[6, particles_index]=speed_y*.4+crossfade(rand(), -20, 20, 0, 32768, CURVE_LINEAR)
+			particles[9, particles_index]=floor(crossfade(rand(), .035, .045, 0, 32768, CURVE_LINEAR)*particles_update_frequency)
 		}
 		else
 		{
-			particles[9, particles_index]=floor(crossfade(rand(), .2, .3, 0, 32768, CURVE_LINEAR)*physics_update_frequency)
+			particles[9, particles_index]=floor(crossfade(rand(), .2, .3, 0, 32768, CURVE_LINEAR)*particles_update_frequency)
 			if $pattern==1
 			{
 				particles[1, particles_index]=$x//crossfade(rand(), $x-.05, $x+.05, 0, 32768, CURVE_LINEAR)
@@ -45,25 +45,25 @@ fn new_particle($x, $y, $type, $pattern)
 		if $type==1
 		{
 			particles[3, particles_index]=rand()/32768*360
-			if sqrt(x_speed*x_speed+y_speed*y_speed)>=200
+			if sqrt(speed_x*speed_x+speed_y*speed_y)>=200
 			{
-			particles[5, particles_index]=x_speed*.2+crossfade(rand(), -50, 50, 0, 32768, CURVE_LINEAR)*crossfade(sqrt(x_speed*x_speed+y_speed*y_speed), 0, 1, 200, 100, CURVE_LINEAR)
-			particles[6, particles_index]=y_speed*.2+crossfade(rand(), -20, 20, 0, 32768, CURVE_LINEAR)*crossfade(sqrt(x_speed*x_speed+y_speed*y_speed), 0, 1, 200, 100, CURVE_LINEAR)
+			particles[5, particles_index]=speed_x*.2+crossfade(rand(), -50, 50, 0, 32768, CURVE_LINEAR)*crossfade(sqrt(speed_x*speed_x+speed_y*speed_y), 0, 1, 200, 100, CURVE_LINEAR)
+			particles[6, particles_index]=speed_y*.2+crossfade(rand(), -20, 20, 0, 32768, CURVE_LINEAR)*crossfade(sqrt(speed_x*speed_x+speed_y*speed_y), 0, 1, 200, 100, CURVE_LINEAR)
 			}
 			else
 			{
-				particles[5, particles_index]=x_speed*.2
-				particles[6, particles_index]=y_speed*.2
+				particles[5, particles_index]=speed_x*.2
+				particles[6, particles_index]=speed_y*.2
 			}
 			particles[7, particles_index]=crossfade(rand(), -4, 4, 0, 32768, CURVE_LINEAR)*360
-			particles[9, particles_index]=floor(.02*physics_update_frequency)
+			particles[9, particles_index]=floor(.02*particles_update_frequency)
 		}
 		else
 		{
 			particles[4, particles_index]=crossfade(rand(), .2, .4, 0, 32768, CURVE_LINEAR)
 			particles[5, particles_index]=crossfade(rand(), -.5, .5, 0, 32768, CURVE_LINEAR)
 			particles[6, particles_index]=crossfade(rand(), -.5, .5, 0, 32768, CURVE_LINEAR)
-			particles[9, particles_index]=floor(crossfade(rand(), 4, 8, 0, 32768, CURVE_LINEAR)*physics_update_frequency)
+			particles[9, particles_index]=floor(crossfade(rand(), 4, 8, 0, 32768, CURVE_LINEAR)*particles_update_frequency)
 		}
 	}
 	particles_index+1
@@ -71,25 +71,25 @@ fn new_particle($x, $y, $type, $pattern)
 }
 fn process_particle($index)
 {
-	if physic_frames<particles[8, $index]+particles[9, $index]
+	if particles_frames<particles[8, $index]+particles[9, $index]
 	{
-		particles[11, $index]=(particles[1, $index]+crossfade(physic_frames, 0, particles[5, $index], particles[8, $index], physics_update_frequency, CURVE_LINEAR)-camera_x)*meter_size*camera_scale
-		particles[12, $index]=(particles[2, $index]+crossfade(physic_frames, 0, particles[6, $index], particles[8, $index], physics_update_frequency, CURVE_LINEAR)-camera_y)*meter_size*camera_scale
+		particles[11, $index]=(particles[1, $index]+crossfade(particles_frames, 0, particles[5, $index], particles[8, $index], particles_update_frequency, CURVE_LINEAR)-camera_x)*meter_size*camera_scale
+		particles[12, $index]=(particles[2, $index]+crossfade(particles_frames, 0, particles[6, $index], particles[8, $index], particles_update_frequency, CURVE_LINEAR)-camera_y)*meter_size*camera_scale
 		if particles[11, $index]>=-WINDOW_XSIZE div 2&&particles[11, $index]<WINDOW_XSIZE div 2&&particles[12, $index]>=-WINDOW_YSIZE div 2&&particles[12, $index]<WINDOW_YSIZE div 2
 		{
 			particles[10, $index]=1
 			if particles[0, $index]==0
 			{
 				particles[14, $index]=meter_size*particles[4, $index]*camera_scale/32
-				particles[16, $index]=crossfade(physic_frames, 256, 0, particles[8, $index], particles[9, $index], CURVE_SLOW)
+				particles[16, $index]=crossfade(particles_frames, 256, 0, particles[8, $index], particles[9, $index], CURVE_SLOW)
 			}
 			else
 			{
-				particles[13, $index]=particles[3, $index]+crossfade(physic_frames, 0, particles[7, $index], particles[8, $index], physics_update_frequency, CURVE_LINEAR)
+				particles[13, $index]=particles[3, $index]+crossfade(particles_frames, 0, particles[7, $index], particles[8, $index], particles_update_frequency, CURVE_LINEAR)
 				if particles[0, $index]==1
 				{
-					particles[14, $index]=ball_size*meter_size*camera_scale*crossfade(physic_frames, 1, 4, particles[8, $index], particles[9, $index], CURVE_LINEAR)/M_SQRT2
-					$fade=crossfade(sqrt(x_speed*x_speed+y_speed*y_speed), 256, 0, 200, 100, CURVE_FAST)
+					particles[14, $index]=ball_size*meter_size*camera_scale*crossfade(particles_frames, 1, 4, particles[8, $index], particles[9, $index], CURVE_LINEAR)/M_SQRT2
+					$fade=crossfade(sqrt(speed_x*speed_x+speed_y*speed_y), 256, 0, 200, 100, CURVE_FAST)
 					if y>=0
 					{
 						$height=256
@@ -99,12 +99,12 @@ fn process_particle($index)
 						$height=crossfade(y, 0, 256, -atmosphere_height, atmosphere_height, CURVE_FAST)
 					}
 					particles[15, $index]=get_color(255, 128+$fade/2, $fade)
-					particles[16, $index]=crossfade(physic_frames, $height, 0, particles[8, $index], particles[9, $index], CURVE_LINEAR)
+					particles[16, $index]=crossfade(particles_frames, $height, 0, particles[8, $index], particles[9, $index], CURVE_LINEAR)
 				}
 				else{if particles[0, $index]==2
 				{
 					particles[14, $index]=meter_size*particles[4, $index]*camera_scale
-					$fade=crossfade(physic_frames, 768, 0, particles[8, $index], particles[9, $index], CURVE_LINEAR)
+					$fade=crossfade(particles_frames, 768, 0, particles[8, $index], particles[9, $index], CURVE_LINEAR)
 					particles[15, $index]=get_color(255, $fade-256, $fade-512)
 					particles[16, $index]=$fade
 				}}
@@ -196,7 +196,7 @@ fn atmosphere()
 	remove($vertices)
 	remove($colors)
 }
-fn draw_ball($red, $green, $blue, $alpha)
+fn draw_ball($red, $green, $blue)
 {
 	$vertices=new(2, 32, INT16)
 	//pixi(halo, (x-camera_x)*meter_size*camera_scale, (y-camera_y)*meter_size*camera_scale, get_color($red, $green, $blue), ball_size*meter_size*camera_scale*4/64, ball_size*meter_size*camera_scale*4/64)
@@ -204,6 +204,29 @@ fn draw_ball($red, $green, $blue, $alpha)
 	op_cn(OP_ADD, $vertices, (x-camera_x)*meter_size*camera_scale, 0, 0, 1, 32)
 	generator(OP_SIN, $vertices, M_PI/2, ball_size/2*meter_size*camera_scale, 0, M_PI/16, 1, 0, 1, 32)
 	op_cn(OP_ADD, $vertices, (y-camera_y)*meter_size*camera_scale, 1, 0, 1, 32)
-	gl_draw_arrays(GL_TRIANGLE_FAN, 0, 32, $red, $green, $blue, $alpha, -1, $vertices)
+	gl_draw_arrays(GL_TRIANGLE_FAN, 0, 32, $red, $green, $blue, 255, -1, $vertices)
 	remove($vertices)
+}
+fn pre_resize_camera()
+{
+	resize_x=camera_offset_x
+	resize_y=camera_offset_y
+	resize_scale=100/camera_scale/meter_size
+	timestamp=time
+}
+fn resize_camera($x, $y, $scale)
+{
+	$scale=100/$scale/meter_size
+	if time<timestamp+camera_resize_time
+	{
+		camera_offset_x=crossfade(time, resize_x, $x, timestamp, camera_resize_time, CURVE_SMOOTH)
+		camera_offset_y=crossfade(time, resize_y, $y, timestamp, camera_resize_time, CURVE_SMOOTH)
+		camera_scale=100/crossfade(time, resize_scale, $scale, timestamp, camera_resize_time, CURVE_SMOOTH)/meter_size
+	}
+	else
+	{
+		camera_offset_x=$x
+		camera_offset_y=$y
+		camera_scale=100/$scale/meter_size
+	}
 }

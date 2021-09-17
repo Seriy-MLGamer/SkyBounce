@@ -23,6 +23,7 @@ IMAGE_FLAG_REMOVE_SOURCE=0b1
 
 MOBILE=1
 COLOR_THEME=THEME_DARK
+GUI_SCALE=1
 WINDOW_SAFE_AREA=20
 
 /**
@@ -386,6 +387,10 @@ fn bind($object, $parent)
 		if $object.window
 		{
 			$array=$parent.windows
+			if $parent.gui
+			{
+				$parent.window_focus=1
+			}
 		}
 		else{if $object.text
 		{
@@ -455,6 +460,10 @@ fn unbind($object)
 				else
 				{
 					resize($array, 1)
+					if $object.parent.gui
+					{
+						$object.parent.window_focus=1
+					}
 				}
 			}
 		}
@@ -489,7 +498,7 @@ fn set_button_callback($button, $function, $arguments)
  */
 fn get_global_x($object)
 {
-	$x=$object.x
+	$x=$object.x*GUI_SCALE
 	if $object.window
 	{
 		if $object.align&LEFT
@@ -504,14 +513,14 @@ fn get_global_x($object)
 	else{if $object.parent>=0&&!$object.parent.gui
 	{
 		$x+get_global_x($object.parent)
-		$x+1+($object.parent.width-2)div 2
+		$x+$object.parent.width*GUI_SCALE div 2
 		if $object.align&LEFT
 		{
-			$x-($object.parent.width-2)div 2
+			$x-$object.parent.width*GUI_SCALE div 2-1
 		}
 		if $object.align&RIGHT
 		{
-			$x+($object.parent.width-2)div 2
+			$x+$object.parent.width*GUI_SCALE div 2-1
 		}
 	}
 	else
@@ -537,7 +546,7 @@ fn get_global_x($object)
  */
 fn get_global_y($object)
 {
-	$y=$object.y
+	$y=$object.y*GUI_SCALE
 	if $object.window
 	{
 		if $object.window.align&TOP
@@ -552,14 +561,14 @@ fn get_global_y($object)
 	else{if $object.parent>=0&&!$object.parent.gui
 	{
 		$y+get_global_y($object.parent)
-		$y+1+($object.parent.height-2)div 2
+		$y+$object.parent.height*GUI_SCALE div 2
 		if $object.align&TOP
 		{
-			$y-($object.parent.height-2)div 2
+			$y-$object.parent.height*GUI_SCALE div 2-1
 		}
 		if $object.align&BOTTOM
 		{
-			$y+($object.parent.height-2)div 2
+			$y+$object.parent.height*GUI_SCALE div 2-1
 		}
 	}
 	else
@@ -634,9 +643,12 @@ fn get_window_event($window)
 	}
 	$x=get_global_x($window)
 	$y=get_global_y($window)
+	$width=$window.width*GUI_SCALE
+	$height=$window.height*GUI_SCALE
+	$y_border=$y-60*GUI_SCALE-1
 	if !$main_event
 	{
-		if EVT[EVT_TYPE]==EVT_MOUSEBUTTONDOWN&&EVT[EVT_X]>=$x&&EVT[EVT_X]<$x+$window.width&&EVT[EVT_Y]>=$y-61&&EVT[EVT_Y]<$y+$window.height
+		if EVT[EVT_TYPE]==EVT_MOUSEBUTTONDOWN&&EVT[EVT_X]>=$x&&EVT[EVT_X]<$x+$width&&EVT[EVT_Y]>=$y_border&&EVT[EVT_Y]<$y+$height
 		{
 			$window.parent.window_focus=1
 			$a=get_size($window.parent.windows)-1 while $window.parent.windows[$a]!=$window
@@ -651,8 +663,9 @@ fn get_window_event($window)
 			ret
 		}
 	}
-	$min_width=402+WINDOW_SAFE_AREA*3
-	$min_height=102+WINDOW_SAFE_AREA*2
+	$min_width=400+WINDOW_SAFE_AREA*3+2/GUI_SCALE
+	$min_height=100+WINDOW_SAFE_AREA*2+2/GUI_SCALE
+	$safe_area=WINDOW_SAFE_AREA*GUI_SCALE
 	if $window.flags&WINDOW_FLAG_DRAGGABLE
 	{
 		if EVT[EVT_KEY]==KEY_MOUSE_LEFT
@@ -673,108 +686,106 @@ fn get_window_event($window)
 			$resize=0
 			if $window.flags&WINDOW_FLAG_RESIZEABLE
 			{
-				if $window.drag_x>=$x&&$window.drag_x<$x+WINDOW_SAFE_AREA
+				if $window.drag_x>=$x&&$window.drag_x<$x+$safe_area
 				{
 					$resize=1
-					$window.x+EVT[EVT_X]-$window.drag_x
-					$window.width-EVT[EVT_X]-$window.drag_x
+					$window.x+(EVT[EVT_X]-$window.drag_x)/GUI_SCALE
+					$window.width-(EVT[EVT_X]-$window.drag_x)/GUI_SCALE
 					$window.drag_x=EVT[EVT_X]
 					$resize_x=get_global_x($window)
 					if $resize_x<-WINDOW_XSIZE div 2
 					{
-						$window.x-$resize_x+WINDOW_XSIZE div 2
-						$window.width+$resize_x+WINDOW_XSIZE div 2
+						$window.x-($resize_x+WINDOW_XSIZE div 2)/GUI_SCALE
+						$window.width+($resize_x+WINDOW_XSIZE div 2)/GUI_SCALE
 						$window.drag_x-$resize_x+WINDOW_XSIZE div 2
 					}
 					else{if $window.width<$min_width
 					{
 						$window.x+$window.width-$min_width
-						$window.drag_x+$window.width-$min_width
+						$window.drag_x+($window.width-$min_width)*GUI_SCALE
 						$window.width=$min_width
 					}}
 				}
-				if $window.drag_y>=$y-61&&$window.drag_y<$y-61+WINDOW_SAFE_AREA
+				if $window.drag_y>=$y_border&&$window.drag_y<$y_border+$safe_area
 				{
 					$resize=1
-					$window.y+EVT[EVT_Y]-$window.drag_y
-					$window.height-EVT[EVT_Y]-$window.drag_y
+					$window.y+(EVT[EVT_Y]-$window.drag_y)/GUI_SCALE
+					$window.height-(EVT[EVT_Y]-$window.drag_y)/GUI_SCALE
 					$window.drag_y=EVT[EVT_Y]
-					$resize_y=get_global_y($window)
-					if $resize_y-61<-WINDOW_YSIZE div 2
+					$resize_y=get_global_y($window)-60*GUI_SCALE-1
+					if $resize_y<-WINDOW_YSIZE div 2
 					{
-						$window.y-$resize_y-61+WINDOW_YSIZE div 2
-						$window.height+$resize_y-61+WINDOW_YSIZE div 2
-						$window.drag_y-$resize_y-61+WINDOW_YSIZE div 2
+						$window.y-($resize_y+WINDOW_YSIZE div 2)/GUI_SCALE
+						$window.height+($resize_y+WINDOW_YSIZE div 2)/GUI_SCALE
+						$window.drag_y-$resize_y+WINDOW_YSIZE div 2
 					}
 					else{if $window.height<$min_height
 					{
 						$window.y+$window.height-$min_height
-						$window.drag_y+$window.height-$min_height
+						$window.drag_y+($window.height-$min_height)*GUI_SCALE
 						$window.height=$min_height
 					}}
 				}
-				if $window.drag_x>=$x+$window.width-WINDOW_SAFE_AREA&&$window.drag_x<$x+$window.width
+				if $window.drag_x>=$x+$width-$safe_area&&$window.drag_x<$x+$width
 				{
 					$resize=1
-					$window.width+EVT[EVT_X]-$window.drag_x
+					$window.width+(EVT[EVT_X]-$window.drag_x)/GUI_SCALE
 					$window.drag_x=EVT[EVT_X]
-					$resize_x=get_global_x($window)
-					if $window.width+$resize_x>WINDOW_XSIZE div 2
+					if $window.width*GUI_SCALE+$x>WINDOW_XSIZE div 2
 					{
-						$window.drag_x+WINDOW_XSIZE div 2-$resize_x-$window.width
-						$window.width=WINDOW_XSIZE div 2-$resize_x
+						$window.drag_x+WINDOW_XSIZE div 2-$x-$window.width*GUI_SCALE
+						$window.width=(WINDOW_XSIZE div 2-$x)/GUI_SCALE
 					}
 					else{if $window.width<$min_width
 					{
-						$window.drag_x+$min_width-$window.width
+						$window.drag_x+($min_width-$window.width)*GUI_SCALE
 						$window.width=$min_width
 					}}
 				}
-				if $window.drag_y>=$y+$window.height-WINDOW_SAFE_AREA&&$window.drag_y<$y+$window.height
+				if $window.drag_y>=$y+$height-$safe_area&&$window.drag_y<$y+$height
 				{
 					$resize=1
-					$window.height+EVT[EVT_Y]-$window.drag_y
+					$window.height+(EVT[EVT_Y]-$window.drag_y)/GUI_SCALE
 					$window.drag_y=EVT[EVT_Y]
-					$resize_y=get_global_y($window)
-					if $window.height+$resize_y>WINDOW_YSIZE div 2
+					if $window.height*GUI_SCALE+$y>WINDOW_YSIZE div 2
 					{
-						$window.drag_y+WINDOW_YSIZE div 2-$resize_y-$window.height
-						$window.height=WINDOW_YSIZE div 2-$resize_y
+						$window.drag_y+WINDOW_YSIZE div 2-$y-$window.height*GUI_SCALE
+						$window.height=(WINDOW_YSIZE div 2-$y)/GUI_SCALE
 					}
 					else{if $window.height<$min_height
 					{
-						$window.drag_y+$min_height-$window.height
+						$window.drag_y+($min_height-$window.height)*GUI_SCALE
 						$window.height=$min_height
 					}}
 				}
 			}
-			if !$resize&&$window.drag_x>=$x&&$window.drag_x<$x+$window.width&&$window.drag_y>=$y-61&&$window.drag_y<$y
+			if !$resize&&$window.drag_x>=$x&&$window.drag_x<$x+$width&&$window.drag_y>=$y_border&&$window.drag_y<$y
 			{
-				$window.x+EVT[EVT_X]-$window.drag_x
-				$window.y+EVT[EVT_Y]-$window.drag_y
+				$window.x+(EVT[EVT_X]-$window.drag_x)/GUI_SCALE
+				$window.y+(EVT[EVT_Y]-$window.drag_y)/GUI_SCALE
 				$window.drag_x=EVT[EVT_X]
 				$window.drag_y=EVT[EVT_Y]
 				$resize_x=get_global_x($window)
 				$resize_y=get_global_y($window)
 				if $resize_x<-WINDOW_XSIZE div 2
 				{
-					$window.x-$resize_x+WINDOW_XSIZE div 2
+					$window.x-($resize_x+WINDOW_XSIZE div 2)/GUI_SCALE
 					$window.drag_x-$resize_x+WINDOW_XSIZE div 2
 				}
-				if $resize_y-61<-WINDOW_YSIZE div 2
+				if $resize_y-60*GUI_SCALE-1<-WINDOW_YSIZE div 2
 				{
-					$window.y-$resize_y-61+WINDOW_YSIZE div 2
-					$window.drag_y-$resize_y-61+WINDOW_YSIZE div 2
+					$window.y-($resize_y-1+WINDOW_YSIZE div 2)/GUI_SCALE-60
+					$window.drag_y-$resize_y-60*GUI_SCALE-1+WINDOW_YSIZE div 2
 				}
-				if $window.width+$resize_x>WINDOW_XSIZE div 2
+				if $width+$resize_x>WINDOW_XSIZE div 2
 				{
-					$window.x+WINDOW_XSIZE div 2-$resize_x-$window.width
-					$window.drag_x+WINDOW_XSIZE div 2-$resize_x-$window.width
+					$window.x+(WINDOW_XSIZE div 2-$resize_x)/GUI_SCALE-$window.width
+					$window.drag_x+WINDOW_XSIZE div 2-$resize_x-$width
 				}
-				if $window.height+$resize_y>WINDOW_YSIZE div 2
+				if $height+$resize_y>WINDOW_YSIZE div 2
 				{
-					$window.y+WINDOW_YSIZE div 2-$resize_y-$window.height
-					$window.drag_y+WINDOW_YSIZE div 2-$resize_y-$window.height
+					$window.y+(WINDOW_YSIZE div 2-$resize_y)/GUI_SCALE-$window.height
+					$window.drag_y+WINDOW_YSIZE div 2-$resize_y-$height
 				}
 			}
 		}
@@ -795,7 +806,7 @@ fn get_window_event($window)
 			}
 		}
 	}
-	if $window.parent.gui&&$window==$window.parent.windows[get_size($window.parent.windows)-1]&&EVT[EVT_TYPE]==EVT_MOUSEBUTTONDOWN&&(EVT[EVT_X]<$x||EVT[EVT_X]>=$x+$window.width||EVT[EVT_Y]<$y-61||EVT[EVT_Y]>=$y+$window.height)
+	if $window.parent.gui&&$window==$window.parent.windows[get_size($window.parent.windows)-1]&&EVT[EVT_TYPE]==EVT_MOUSEBUTTONDOWN&&(EVT[EVT_X]<$x||EVT[EVT_X]>=$x+$width||EVT[EVT_Y]<$y_border||EVT[EVT_Y]>=$y+$height)
 	{
 		$window.parent.window_focus=0
 	}
@@ -812,8 +823,6 @@ fn get_button_event($button)
 {
 	if $button.active
 	{
-		$x=get_global_x($button)
-		$y=get_global_y($button)
 		$do_it=0
 		if EVT[EVT_KEY]==$button.keyboard_key
 		{
@@ -834,7 +843,12 @@ fn get_button_event($button)
 				}
 			}
 		}
-		if EVT[EVT_X]>=$x&&EVT[EVT_X]<$x+$button.width&&EVT[EVT_Y]>=$y&&EVT[EVT_Y]<$y+$button.height
+		if !$do_it
+		{
+			$x=get_global_x($button)
+			$y=get_global_y($button)
+		}
+		if EVT[EVT_X]>=$x&&EVT[EVT_X]<$x+$button.width*GUI_SCALE&&EVT[EVT_Y]>=$y&&EVT[EVT_Y]<$y+$button.height*GUI_SCALE
 		{
 			if MOBILE||EVT[EVT_KEY]==$button.mouse_key
 			{
@@ -941,11 +955,14 @@ fn draw_GUI($gui)
  */
 fn draw_window($window)
 {
-	$x=get_global_x($window)
-	$y=get_global_y($window)
 	$border_alpha=255
 	$title_alpha=128
 	$body_alpha=64
+	$x=get_global_x($window)
+	$y=get_global_y($window)
+	$width=$window.width*GUI_SCALE
+	$height=$window.height*GUI_SCALE
+	$border=60*GUI_SCALE
 	if $window.parent.gui
 	{
 		if $window.parent.window_focus
@@ -972,14 +989,14 @@ fn draw_window($window)
 	transp($transp*$window.transp div 255)
 	if COLOR_THEME==THEME_DARK
 	{
-		fbox($x+1, $y-60, $window.width-2, 60, get_color(get_red($color)*$title_alpha div 255, get_green($color)*$title_alpha div 255, get_blue($color)*$title_alpha div 255))
+		fbox($x+1, $y-$border, $width-2, $border, get_color(get_red($color)*$title_alpha div 255, get_green($color)*$title_alpha div 255, get_blue($color)*$title_alpha div 255))
 	}
 	else{if COLOR_THEME==THEME_LIGHT
 	{
-		fbox($x+1, $y-60, $window.width-2, 60, get_color($title_alpha+get_red($color)*$title_alpha div 256, $title_alpha+get_green($color)*$title_alpha div 256, $title_alpha+get_blue($color)*$title_alpha div 256))
+		fbox($x+1, $y-$border, $width-2, $border, get_color($title_alpha+get_red($color)*$title_alpha div 256, $title_alpha+get_green($color)*$title_alpha div 256, $title_alpha+get_blue($color)*$title_alpha div 256))
 	}}
 	transp(get_transp()*$body_alpha div 255)
-	fbox($x+1, $y+1, $window.width-2, $window.height-2, $color)
+	fbox($x+1, $y+1, $width-2, $height-2, $color)
 	transp($transp*$window.transp div 255)
 	$a=0 while $a!=get_size($window.texts)
 	{
@@ -989,6 +1006,7 @@ fn draw_window($window)
 			{
 				$window.texts[$a].color=get_color(get_red($color)*64 div 255, get_green($color)*64 div 255, get_blue($color)*64 div 255)
 			}
+			$window.texts[$a].width=$window.width-2
 			draw_text($window.texts[$a])
 		}
 		else{if $window.texts[$a]>=0
@@ -1014,8 +1032,8 @@ fn draw_window($window)
 		$a+1
 	}
 	transp(get_transp()*$border_alpha div 255)
-	box($x, $y-61, $window.width-1, $window.height+60, $color)
-	line($x, $y, $x+$window.width-1, $y, $color)
+	box($x, $y-$border-1, $width-1, $height+$border, $color)
+	line($x, $y, $x+$width-1, $y, $color)
 	transp($transp)
 }
 /**
@@ -1029,10 +1047,10 @@ fn draw_text($text)
 {
 	$x=get_global_x($text)
 	$y=get_global_y($text)
-	t_scale($text.size, $text.size, 1)
+	t_scale($text.size*GUI_SCALE, $text.size*GUI_SCALE, 1)
 	$transp=get_transp()
 	transp($transp*$text.transp div 255)
-	print($text.string, $x/$text.size, $y/$text.size, $text.color, $text.text_align, $text.width/$text.size)
+	print($text.string, $x/$text.size/GUI_SCALE, $y/$text.size/GUI_SCALE, $text.color, $text.text_align, $text.width/$text.size)
 	transp($transp)
 	t_reset()
 }
@@ -1047,9 +1065,11 @@ fn draw_image($image)
 {
 	$x=get_global_x($image)
 	$y=get_global_y($image)
+	$width=$image.width*GUI_SCALE
+	$height=$image.height*GUI_SCALE
 	$transp=get_transp()
 	transp($transp*$image.transp div 255)
-	pixi($image.source, $x+$image.width div 2, $y+$image.height div 2, $image.color, $image.width/get_xsize($image.source), $image.height/get_ysize($image.source))
+	pixi($image.source, $x+$width div 2, $y+$height div 2, $image.color, $width/get_xsize($image.source), $height/get_ysize($image.source))
 	transp($transp)
 }
 /**
@@ -1063,6 +1083,8 @@ fn draw_button($button)
 {
 	$x=get_global_x($button)
 	$y=get_global_y($button)
+	$width=$button.width*GUI_SCALE
+	$height=$button.height*GUI_SCALE
 	$border_alpha=255
 	$body_alpha=64
 	$normal=0
@@ -1165,7 +1187,7 @@ fn draw_button($button)
 	if $body_alpha!=0
 	{
 		transp($transp*$button.transp div 255*$body_alpha div 255)
-		fbox($x+1, $y+1, $button.width-2, $button.height-2, $button_color)
+		fbox($x+1, $y+1, $width-2, $height-2, $button_color)
 	}
 	transp($transp*$button.transp div 255)
 	if COLOR_THEME==THEME_LIGHT
@@ -1177,7 +1199,7 @@ fn draw_button($button)
 	if $border_alpha!=0
 	{
 		transp(get_transp()*$border_alpha div 255)
-		box($x, $y, $button.width-1, $button.height-1, $button_color)
+		box($x, $y, $width-1, $height-1, $button_color)
 	}
 	transp($transp)
 }
